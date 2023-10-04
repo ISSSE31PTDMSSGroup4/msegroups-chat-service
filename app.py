@@ -6,6 +6,9 @@ import simplejson
 from messages_repo import MessagesRepo
 
 
+from messages_repo import MessagesRepo
+
+
 app = Flask(__name__, template_folder='public')
 cors = CORS(app)
 app.config['CORS_HEADERS'] = 'Content-Type'
