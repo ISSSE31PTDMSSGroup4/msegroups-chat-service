@@ -11,12 +11,14 @@ cors = CORS(app)
 app.config['CORS_HEADERS'] = 'Content-Type'
 
 
+use_local_db = True
+
 # Load the config
 with open('config.json', 'r') as config_file:
     config = json.load(config_file)
 
 
-repo = MessagesRepo()
+if use_local_db: repo = MessagesRepo()
 
 # Use the config to initialize Pusher
 pusher = pusher_client = pusher.Pusher(
@@ -36,9 +38,6 @@ def get_channel_name(username1, username2):
     print(channel_name)
     return channel_name
 
-# channel_name = get_channel_name("Jack" , "Lucy")
-
-# messages = repo.get_all(name=channel_name)
 
 @app.route('/api/pusher_config', methods=['GET'])
 def get_pusher_config():
@@ -58,7 +57,8 @@ def send_messages():
 
     channel_name = get_channel_name(username , receiver)
     
-    repo.create(channel_name, data['message'],time,sender=username,receiver=receiver)
+    if use_local_db: 
+        repo.create(channel_name, data['message'],time,sender=username,receiver=receiver)
 
     pusher.trigger(channel_name, 'message', {
         
@@ -78,7 +78,9 @@ def get_history():
 
     channel_name = get_channel_name(username , receiver)
 
-    results = repo.get_all(name=channel_name)["results"]
+    results = {"results":[]}
+    if use_local_db: 
+        results = repo.get_all(name=channel_name)["results"]
 
     messages = []
     print(messages)

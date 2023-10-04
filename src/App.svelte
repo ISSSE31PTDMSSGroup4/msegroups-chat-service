@@ -4,6 +4,7 @@
 
     let pusher;
     let channel;
+    let prevChannelName;
 
     let username = 'username';
     let receiver = "";
@@ -81,9 +82,18 @@
 
     const switchReceiver = () => {
         console.log("receiver: " + receiver);
-
-        channel = pusher.subscribe(getChannelName(username, receiver));
         
+        let newChannelName = getChannelName(username, receiver);
+
+        if (channel) {
+            channel.unbind('message'); 
+            pusher.unsubscribe(prevChannelName); 
+        }
+
+        channel = pusher.subscribe(newChannelName);
+        
+        prevChannelName = newChannelName
+
         // Fetch chat history when switching receiver
         fetchHistory();
 
