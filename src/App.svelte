@@ -63,15 +63,43 @@
         return channelName;
     }
 
+    const fetchHistory = async () => {
+        const response = await fetch('http://localhost:8000/api/history',{
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                username,
+                receiver,
+            })
+        });
+        const data = await response.json();
+        if (data && data.length > 0) {
+                messages = data;
+            } 
+        console.log("history result: ", messages);
+    }
+
     const switchReceiver = () => {
         console.log("receiver: " + receiver);
+
         channel = pusher.subscribe(getChannelName(username, receiver));
+        
+        // Fetch chat history when switching receiver
+        fetchHistory();
+
         messages = [];
         channel.bind('message', data => {
             messages = [...messages, data];
         });
         // messages = new_messages
     }
+
+    const printMessages = () => {
+     submit();
+     console.log(messages);   
+    }
+
+
 </script>
 
 <div class="container">
@@ -92,6 +120,8 @@
     </div>
     <form on:submit|preventDefault={submit}>
         <input class="form-control" placeholder="Write a message" bind:value={message}/>
+        <button type="button" on:click={printMessages}>Send Message</button> 
+
     </form>
     <input class="form-control" placeholder="Switch receiver" bind:value={receiver}/>
     <button type="button" on:click={switchReceiver}>Switch to new receiver</button> 
