@@ -4,3 +4,5 @@ config.json
 
 .DS_Store
 .vscode
+messages.db
+__pycache__

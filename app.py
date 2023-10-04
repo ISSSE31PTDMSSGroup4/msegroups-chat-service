@@ -3,6 +3,9 @@ from flask_cors import CORS
 from pusher import pusher
 import simplejson
 
+from messages_repo import MessagesRepo
+
+
 app = Flask(__name__, template_folder='public')
 cors = CORS(app)
 app.config['CORS_HEADERS'] = 'Content-Type'
@@ -11,6 +14,9 @@ app.config['CORS_HEADERS'] = 'Content-Type'
 # Load the config
 with open('config.json', 'r') as config_file:
     config = json.load(config_file)
+
+
+repo = MessagesRepo()
 
 # Use the config to initialize Pusher
 pusher = pusher_client = pusher.Pusher(
@@ -30,6 +36,10 @@ def get_channel_name(username1, username2):
     print(channel_name)
     return channel_name
 
+# channel_name = get_channel_name("Jack" , "Lucy")
+
+# messages = repo.get_all(name=channel_name)
+
 @app.route('/api/pusher_config', methods=['GET'])
 def get_pusher_config():
     # Return pusher config info
@@ -47,6 +57,9 @@ def send_messages():
     time = data['time']
 
     channel_name = get_channel_name(username , receiver)
+    
+    repo.create(channel_name, data['message'],time,sender=username,receiver=receiver)
+
     pusher.trigger(channel_name, 'message', {
         
         'username' : data['username'],
@@ -55,6 +68,33 @@ def send_messages():
         })
 
     return jsonify([])
+
+@app.route('/api/history', methods=['POST'])
+def get_history():
+    data = request.json
+
+    username = data['username']
+    receiver = data['receiver']
+
+    channel_name = get_channel_name(username , receiver)
+
+    results = repo.get_all(name=channel_name)["results"]
+
+    messages = []
+    print(messages)
+    
+    if(results): # If there is message history
+        for r in results:
+            messages.append({
+                'username' : r['sender'],
+                'message' : r['text'],
+                'time': r['time'],
+            })
+
+        return jsonify(messages)
+    else: # if there is no message history
+        return jsonify([])
+         
 
 
 @app.route('/new/guest', methods=['POST'])
