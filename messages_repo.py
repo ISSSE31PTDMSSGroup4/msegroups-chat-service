@@ -17,11 +17,12 @@ class MessagesRepo:
         try:
             db = self._connect()
             cursor = db.cursor()
-            cursor.execute( '''
+            cursor.execute( ''' 
                             create table if not exists messages
                             (id INTEGER PRIMARY KEY, name TEXT, 
-                            text TEXT, time INTEGER)
-                            ''')
+                            text TEXT, time TEXT, message_id INTEGER,
+                           sender TEXT, receiver TEXT)
+                            ''')  #name used here is the channel name instead of sender / reciever name 
             db.commit()
         except Exception as e:
             db.rollback()
@@ -35,16 +36,19 @@ class MessagesRepo:
             'id': row[0],
             'name': row[1],
             'text': row[2],
-            'time': row[3]
+            'time': row[3],
+            "message_id": row[4],
+            "sender": row[5],
+            "receiver": row[6]
         }
             
-    def get_all(self, after_id=0):
+    def get_all(self, name, after_id=0):
         """Get all of the existing messages"""
         try:
             db = self._connect()
             cursor = db.cursor()
             
-            cursor.execute('''SELECT * FROM messages WHERE id > ?''', (after_id,))
+            cursor.execute('''SELECT * FROM messages WHERE name == ? AND message_id > ?''', (name ,after_id))
                 
             all_rows = cursor.fetchall()
             
@@ -59,8 +63,26 @@ class MessagesRepo:
             db.close()
         
         return {'results': all}
+
+    def get_messages_count(self, name):
+        count = 0
+        try:
+            db = self._connect()
+            cursor = db.cursor()
+
+            cursor.execute('''SELECT COUNT(*) FROM messages WHERE name == ?''', (name,))
+            count = cursor.fetchone()[0]  
+
+            db.commit()
+
+        except Exception as e:
+            db.rollback()
+            raise e
+        finally:
+            db.close()
+        return count
             
-    def create(self, name, text):
+    def create(self, name, text, time, sender, receiver):
         """Persist a message to the database"""
         
         message = None
@@ -69,15 +91,19 @@ class MessagesRepo:
             db = self._connect()
             cursor = db.cursor()
             
-            now = int(time.time() * 1000)
-            cursor.execute('''INSERT INTO messages(name, text, time)
-                  VALUES(?,?,?)''', (name, text, now))
+            message_id = self.get_messages_count(name)
+
+            cursor.execute('''INSERT INTO messages(name, text, time, message_id, sender, receiver)
+                  VALUES(?,?,?,?,?,?)''', (name, text, time, message_id, sender, receiver))
             
             message = self._row_to_status_dict([
                 cursor.lastrowid,
                 name,
                 text,
-                now
+                time,
+                message_id,
+                sender,
+                receiver
             ])
 
             db.commit()
