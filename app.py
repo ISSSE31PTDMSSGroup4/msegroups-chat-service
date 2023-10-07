@@ -42,7 +42,7 @@ def get_channel_name(username1, username2):
     return channel_name
 
 
-@app.route('/api/pusher_config', methods=['GET'])
+@app.route('/chat/config', methods=['GET'])
 def get_pusher_config():
     # Return pusher config info
     return jsonify({
@@ -50,75 +50,85 @@ def get_pusher_config():
         "cluster": config["server"]["cluster"]
     })
 
-@app.route('/api/messages', methods=['POST'])
+@app.route('/chat/message', methods=['POST'])
 def send_messages():
-    data = request.json
+    try:
+        data = request.json
 
-    username = data['username']
-    receiver = data['receiver']
-    time = data['time']
+        username = data['username']
+        receiver = data['receiver']
+        time = data['time']
 
-    channel_name = get_channel_name(username , receiver)
-    
-    if use_local_db: 
-        repo.create(channel_name, data['message'],time,sender=username,receiver=receiver)
 
-    pusher.trigger(channel_name, 'message', {
+        channel_name = get_channel_name(username , receiver)
         
-        'username' : data['username'],
-        'message' : data['message'],
-        'time': time
-        })
+        if use_local_db: 
+            repo.create(channel_name, data['message'],time,sender=username,receiver=receiver)
 
-    return jsonify([])
-
-@app.route('/api/history', methods=['POST'])
-def get_history():
-    data = request.json
-
-    username = data['username']
-    receiver = data['receiver']
-
-    channel_name = get_channel_name(username , receiver)
-
-    results = {"results":[]}
-    if use_local_db: 
-        results = repo.get_all(name=channel_name)["results"]
-
-    messages = []
-    print(messages)
-    
-    if(results): # If there is message history
-        for r in results:
-            messages.append({
-                'username' : r['sender'],
-                'message' : r['text'],
-                'time': r['time'],
+        pusher.trigger(channel_name, 'message', {
+            
+            'username' : data['username'],
+            'message' : data['message'],
+            'time': time
             })
 
-        return jsonify(messages)
-    else: # if there is no message history
-        return jsonify([])
+        return jsonify({'status': 'success', 'message': 'Operation was successful'}), 200
+    
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': f"An error occurred: {str(e)}"}), 400
+
+@app.route('/chat/history', methods=['POST'])
+def get_history():
+
+    try:
+        data = request.json
+
+        username = data['username']
+        receiver = data['receiver']
+
+        channel_name = get_channel_name(username , receiver)
+
+        results = {"results":[]}
+        if use_local_db: 
+            results = repo.get_all(name=channel_name)["results"]
+
+        messages = []
+        print(messages)
+        
+        if(results): # If there is message history
+            for r in results:
+                messages.append({
+                    'username' : r['sender'],
+                    'message' : r['text'],
+                    'time': r['time'],
+                })
+
+            return jsonify(messages)
+        else: # if there is no message history
+            return jsonify([])
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': f"An error occurred: {str(e)}"}), 400
+
          
 
 
-@app.route('/new/guest', methods=['POST'])
-def guestUser():
-	data = request.json
+# @app.route('/new/guest', methods=['POST'])
+# def guestUser():
+# 	data = request.json
 
-	pusher.trigger(u'general-channel', u'new-guest-details', {
-		'name' : data['name'],
-		'email' : data['email']
-		})
+# 	pusher.trigger(u'general-channel', u'new-guest-details', {
+# 		'name' : data['name'],
+# 		'email' : data['email']
+# 		})
 
-	return json.dumps(data)
+# 	return json.dumps(data)
 
 
-@app.route("/pusher/auth", methods=['POST'])
-def pusher_authentication():
-	auth = pusher.authenticate(channel=request.form['channel_name'],socket_id=request.form['socket_id'])
-	print(json.dumps(auth))
-	return json.dumps(auth)
+# @app.route("/pusher/auth", methods=['POST'])
+# def pusher_authentication():
+# 	auth = pusher.authenticate(channel=request.form['channel_name'],socket_id=request.form['socket_id'])
+# 	print(json.dumps(auth))
+# 	return json.dumps(auth)
 
 
 if __name__ == '__main__':

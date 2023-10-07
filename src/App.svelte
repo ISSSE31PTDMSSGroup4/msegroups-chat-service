@@ -10,6 +10,7 @@
     let receiver = "";
     let message = '';
     let messages = [];
+    let base_url = "http://localhost:8000";
     let new_messages = [
         {
 		'username' : "user for test",
@@ -17,11 +18,12 @@
         }
     ];
 
+    // Chat Implementation
     onMount(async () => {
         Pusher.logToConsole = true;
 
         // Fetch Pusher configuration from the backend
-        const response = await fetch('http://localhost:8000/api/pusher_config');
+        const response = await fetch(base_url+'/chat/config');
         const config = await response.json();
 
         pusher = new Pusher(config.key, 
@@ -32,13 +34,14 @@
         });
     })
 
+    // Chat implementation - Send Message
     const submit = async () => {
         console.log("submit triggered");
 
         let date = new Date();
         let localTime = date.toLocaleString('en-US', { timeZone: 'Asia/Singapore' });
 
-        await fetch('http://localhost:8000/api/messages', {
+        await fetch(base_url+'/chat/message', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({
@@ -49,9 +52,17 @@
             })
         });
 
+        console.log(JSON.stringify({
+                username,
+                receiver,
+                message,
+                time: localTime
+            }));
+
         message = '';
     }
 
+    // Chat implementation - Channel name helper
     function getChannelName(username,receiver){
         // Sort the usernames
         const sortedUsernames = [username, receiver].sort();
@@ -64,8 +75,9 @@
         return channelName;
     }
 
+    // Chat implementation - Get chat history
     const fetchHistory = async () => {
-        const response = await fetch('http://localhost:8000/api/history',{
+        const response = await fetch(base_url + '/chat/history',{
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({
@@ -80,6 +92,7 @@
         console.log("history result: ", messages);
     }
 
+    // Chat implementation - Swicth the chatting user
     const switchReceiver = () => {
         console.log("receiver: " + receiver);
         
@@ -101,7 +114,6 @@
         channel.bind('message', data => {
             messages = [...messages, data];
         });
-        // messages = new_messages
     }
 
     const printMessages = () => {
