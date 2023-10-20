@@ -52,14 +52,16 @@
     const submit = async () => {
         console.log("submit triggered");
 
-        const channelName = prevChannelName;
-
         const message_body = JSON.stringify({
-            channelName,  // assuming this is determined somewhere in your chat logic
-            user: {
+            userInfo: {
                 userId,  // this could be the user's ID from your system
                 name,  // the user's name from your system
                 avatar,  // the user's avatar URL
+            },
+            receiverInfo:{
+                    avatar: 'https://mdbcdn.b-cdn.net/img/new/avatars/5.webp', 
+                    name: 'Lucy',
+                    userId: 1
             },
             message,  // the message text
             userEmail,  // the email of the user sending the message
@@ -105,6 +107,23 @@
         console.log("history result: ", messages);
     }
 
+    // Friend implementation - Get Friend List
+    const fetchFirnedList = async () => {
+        const response = await fetch(base_url + '/api/chat/friendlist',{
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                userEmail,
+            })
+        });
+        const data = await response.json();
+        if (data && data.length > 0) {
+                friends = data;
+            }
+        console.log(friends)
+    }
+
+
     // Chat implementation - UI messages update helper
     const receiveNewMessage = (data) =>{
         messages = [...messages, data];
@@ -127,6 +146,8 @@
 
         // Fetch chat history when switching receiver
         fetchHistory();
+
+        fetchFirnedList();
 
         messages = [];
         channel.bind('message', data => receiveNewMessage(data));
@@ -211,7 +232,7 @@
                     <div class="d-flex w-100 align-items-center justify-content-between">
                         <strong class="mb-1">{msg.userEmail}</strong>
                     </div>
-                    <div class="col-10 mb-1 small">{msg.message} <span style="color: gray; font-style: italic;">{formatUnixTime(msg.timestamp)}</span></div>
+                    <div class="col-10 mb-1  small">{msg.message} <span style="color: gray; font-style: italic;">{formatUnixTime(msg.timestamp)}</span></div>
                 </div>
 
             {/each}
@@ -221,8 +242,8 @@
         <input class="form-control" placeholder="Write a message" bind:value={message}/>
         <button type="button" on:click={printMessages}>Send Message</button> 
     </form>
-    <input class="form-control" placeholder="Switch userEmail" bind:value={receiverEmail}/>
-    <button type="button" on:click={switchReceiver}>Switch to new userEmail</button> 
+    <input class="form-control" placeholder="Switch receiverEmail" bind:value={receiverEmail}/>
+    <button type="button" on:click={switchReceiver}>Switch to new receiverEmail</button> 
     <input class="form-control" placeholder="New friend email" bind:value={newFriendEmail}/>
     <button type="button" on:click={printMessages}>Add New Friend</button> 
 </div>
