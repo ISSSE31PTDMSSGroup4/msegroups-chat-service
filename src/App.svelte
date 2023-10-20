@@ -6,7 +6,7 @@
     let channel;
     let prevChannelName;
 
-    let userEmail = 'username';
+    let userEmail = 'username@gmail.com';
     let receiverEmail = "";
     let message = '';
 
@@ -18,8 +18,23 @@
     let messages = [];
     let base_url = "http://localhost:8000";
 
+    let newFriendEmail = "";
 
-    // Chat Implementation
+    
+    // Chat Implementation - 模拟从profile那边拿到的main user信息
+    let mainUserInfo = {email: userEmail, 
+                        avatar: 'https://mdbcdn.b-cdn.net/img/new/avatars/1.webp', 
+                        name: 'Main User',
+                        userID: 1
+                    };
+
+    // 模拟的朋友列表数据
+    let friends = [
+
+    ];
+
+
+    // Chat Implementation - Setup Pusher when the component is mounted
     onMount(async () => {
         Pusher.logToConsole = true;
 
@@ -27,11 +42,9 @@
         const response = await fetch(base_url+'/api/chat/config');
         const config = await response.json();
 
-        pusher = new Pusher(config.key, 
-        // pusher key
+        pusher = new Pusher(config.key, // pusher key
         {
             cluster: config.cluster,
-            // authEndpoint: '/pusher/auth'
         });
     })
 
@@ -92,12 +105,13 @@
         console.log("history result: ", messages);
     }
 
+    // Chat implementation - UI messages update helper
     const receiveNewMessage = (data) =>{
         messages = [...messages, data];
     }
 
     // Chat implementation - Swicth the chatting user
-    const switchReceiver = () => {
+    const switchReceiver = async () => {
         console.log("userEmail: " + receiverEmail);
         
         let newChannelName = getChannelName(userEmail, receiverEmail);
@@ -119,6 +133,11 @@
 
     }
 
+    const switchMainUser = async () => {
+        mainUserInfo = {email: userEmail, avatar: 'https://mdbcdn.b-cdn.net/img/new/avatars/1.webp', name: 'Main User'}
+    }
+
+    // Chat implementation - Time
     function formatUnixTime(unixTime) {
         const milliseconds = unixTime;
 
@@ -136,18 +155,55 @@
         return formattedTime;
         }
 
+
+
+    function switchToChat(friend) {
+        console.log("switchToChat triggered", friend.email);
+        // receiverEmail = friend.email;  // 设置接收者的邮箱
+        // switchReceiver();  // 切换聊天对象
+    }
+
+    //for debug
     const printMessages = () => {
      submit();
      console.log(messages);
-    
     }
 
 
 </script>
 <div class="container">
+
+    <!-- Friend List Implementation -->
+    <div class="friend-list">
+        <h2>Main User</h2>
+        <div class="friend">
+            <img src={mainUserInfo.avatar} alt={mainUserInfo.name} class="friend-avatar" />
+            <div class="friend-info">
+                <div class="friend-name">{mainUserInfo.name}</div>
+                <div class="friend-email">{mainUserInfo.email}</div>
+            </div>
+        </div>
+        <h2>Friend List</h2>
+        <div class="friends">
+            {#each friends as friend}
+                <div class="friend" on:click={() => switchToChat(friend)}>
+                    <img src={friend.avatar} alt={friend.name} class="friend-avatar" />
+                    <div class="friend-info">
+                        <div class="friend-name">{friend.name}</div>
+                        <div class="friend-email">{friend.email}</div>
+                        <div class="friend-email">unread: {friend.unread}</div>
+                    </div>
+                </div>
+            {/each}
+        </div>
+    </div>
+
+
     <div class="d-flex flex-column align-items-stretch flex-shrink-0 bg-white">
         <div class="d-flex align-items-center flex-shrink-0 p-3 link-dark text-decoration-none border-bottom">
-            <input class="fs-5 fw-semibold" bind:value={userEmail}/>
+            <input class="fs-5 fw-semibold" placeholder="Main user email" bind:value={userEmail}/>
+            <button type="button" on:click={switchMainUser}>Login</button> 
+
         </div>
         <div class="list-group list-group-flush border-bottom scrollarea">
             {#each messages as msg}
@@ -164,14 +220,43 @@
     <form on:submit|preventDefault={submit}>
         <input class="form-control" placeholder="Write a message" bind:value={message}/>
         <button type="button" on:click={printMessages}>Send Message</button> 
-
     </form>
     <input class="form-control" placeholder="Switch userEmail" bind:value={receiverEmail}/>
     <button type="button" on:click={switchReceiver}>Switch to new userEmail</button> 
+    <input class="form-control" placeholder="New friend email" bind:value={newFriendEmail}/>
+    <button type="button" on:click={printMessages}>Add New Friend</button> 
 </div>
 
 <style>
     .scrollarea {
         min-height: 500px;
     }
+
+    /* Friend List Style */
+    .friend-list {
+        width: 200px; 
+        padding: 10px;
+        border-right: 1px solid #ddd; 
+
+    }
+    .friend {
+        display: flex;
+        align-items: center;
+        cursor: pointer;
+        padding: 5px;
+        
+    }
+    .friend-avatar {
+        width: 30px; 
+        height: 30px;
+        border-radius: 50%;
+        margin-right: 10px;
+    }
+    .friend-info .friend-name {
+        font-weight: bold;
+    }
+    .friend-info .friend-email {
+        color: #555;
+    }
+    
 </style>

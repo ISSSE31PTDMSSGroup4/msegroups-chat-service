@@ -20,10 +20,18 @@ use_dynamodb = True
 with open('config.json', 'r') as config_file:
     config = json.load(config_file)
 
+aws_access_key_id = config["aws"]["aws_access_key_id"]
+aws_secret_access_key = config["aws"]["aws_secret_access_key"]
+aws_region_name = config["aws"]["aws_region_name"]
 
 if use_dynamodb: 
-    repo = DynamoMessageRepo()
-    friend_repo = FriendRepo()
+    repo = DynamoMessageRepo(aws_access_key_id=aws_access_key_id,
+                            aws_secret_access_key = aws_secret_access_key,
+                            aws_region_name=aws_region_name)
+    
+    friend_repo = FriendRepo(aws_access_key_id=aws_access_key_id,
+                            aws_secret_access_key = aws_secret_access_key,
+                            aws_region_name=aws_region_name)
 
 # Use the config to initialize Pusher
 pusher = pusher_client = pusher.Pusher(
@@ -42,7 +50,6 @@ def get_channel_name(username1, username2):
     channel_name = sorted_usernames[0] + "-" + sorted_usernames[1]
     return channel_name
 
-
 @app.route('/api/chat/config', methods=['GET'])
 def get_pusher_config():
     # Return pusher config info
@@ -55,15 +62,20 @@ def get_pusher_config():
 def send_messages():
     data = request.json
 
-    # print(str(data).replace("'", '"'))
-
+    
     # We will use the current Unix time as the unique identifier for each message.
     # This will also allow us to sort messages chronologically.
     timestamp = int(round(time.time(),3)*1000)  # Current Unix time
-    user = data['user']
     message = data['message']
-    user_email = data['userEmail']
+    
+    x_user = request.headers.get('X-User')
+    if x_user is None: user_email = data['userEmail']
+    else: user_email = x_user
+
     receiver_email = data['receiverEmail']
+
+    user_info = data['userInfo']
+    receiver_info = data["receiverInfo"]
 
     channel_name = get_channel_name(user_email, receiver_email)
     
@@ -71,23 +83,27 @@ def send_messages():
         repo.create(
                     channelName = channel_name,
                     timestamp = timestamp,
-                    # User info
-                    userId = user['userId'],
-                    avatar = user['avatar'],
-                    name = user['name'],
-                    # Message info
                     message = message,
                     userEmail=user_email,
                     receiverEmail=receiver_email,
+                    userInfo= user_info, # User info
+                    receiverInfo= receiver_info # Receiver info
                     )
 
+    # Trigger the 'message' event for the 'chat' channel
+    # In chat case, channel_name is the combination of two users' email
     pusher.trigger(channel_name, 'message', {
             'channelName': channel_name,  # Partition key
             'timestamp': timestamp,  # Sort key
-            'user': {
-                'userId': user['userId'],
-                'name': user['avatar'],
-                'avatar': user['name'],
+            'userInfo': {
+                'userId': user_info['userId'],
+                'name': user_info['avatar'],
+                'avatar': user_info['name'],
+            },
+            'receiverInfo': {  
+                'userId': receiver_info['userId'],
+                'name': receiver_info['avatar'],
+                'avatar': receiver_info['name'],
             },
             'message': message,
             'userEmail': user_email,
@@ -100,8 +116,10 @@ def send_messages():
 def get_history():
 
     data = request.json
+    x_user = request.headers.get('X-User')
 
-    username = data['userEmail']
+    if x_user is None: username = data['userEmail']
+    else: username = x_user
     receiver = data['receiverEmail']
 
     channel_name = get_channel_name(username , receiver)
@@ -118,9 +136,14 @@ def get_history():
                 'channelName': r["channelName"],  # Partition key
                 'timestamp': int(r["timestamp"]),  # Sort key
                 'user': {
-                    'userId': r['user']["userId"],
-                    'name': r['user']["name"],
-                    'avatar': r['user']["avatar"],
+                    'userId': r['userInfo']["userId"],
+                    'name': r['userInfo']["name"],
+                    'avatar': r['userInfo']["avatar"],
+                }, 
+                'receiverInfo': {  
+                    'userId': r['receiverInfo']['userId'],
+                    'name': r['receiverInfo']['avatar'],
+                    'avatar': r['receiverInfo']['name'],
                 },
                 'message': r["message"],
                 'userEmail': r["userEmail"],
@@ -135,8 +158,10 @@ def get_history():
 def get_friend_list():
     data = request.json
 
-    user_email = data['userEmail']
-    
+    x_user = request.headers.get('X-User')
+    if x_user is None: user_email = data['userEmail']
+    else: user_email = x_user
+
     results = []
     if use_dynamodb: 
         results = friend_repo.get_all_friends(userEmail=user_email)
@@ -150,16 +175,57 @@ def get_friend_list():
 def add_friend():
     data = request.json
 
-    user_email = data['userEmail']
+    x_user = request.headers.get('X-User')
+    if x_user is None: user_email = data['userEmail']
+    else: user_email = x_user
+    user_data = data['userData']
+
     friend_data = data['friendData']
+    friend_email = friend_data['email']
 
-    friends = []
     if use_dynamodb: 
-        friends = friend_repo.add_friend(userEmail=user_email, 
+        friend_repo.add_friend(userEmail=user_email, 
                                          friend_data= friend_data)
+        friend_repo.add_friend(userEmail=friend_email, 
+                                         friend_data= user_data)
+    
+    channel_name = user_email
+    # Add rquester to the friend's friend list and update UI accordingly
+    pusher.trigger(channel_name, 'newfriend', {
+            'channelName': channel_name,
+            'userData': user_data 
+        })
+
+    return jsonify([])
 
 
-    return jsonify([friends])
+@app.route('/api/chat/addfriend-multi', methods=['POST'])
+def add_multi_friend():
+
+    x_user = request.headers.get('X-User')
+    if x_user is None: user_email = request.json['userEmail']
+    else: user_email = x_user
+    user_data = request.json['userData']
+
+    friend_data = request.json["friendData"]
+
+    for friend_data in request.json["friendData"]:
+        if use_dynamodb: 
+            friend_email = friend_data['email']
+            friend_repo.add_friend(userEmail=user_email, 
+                                            friend_data= friend_data)
+            friend_repo.add_friend(userEmail=friend_email, 
+                                            friend_data= user_data)
+        
+            channel_name = user_email
+            # Add rquester to the friend's
+            #  friend list and update UI accordingly
+            pusher.trigger(channel_name, 'newfriend', {
+                    'channelName': channel_name,
+                    'userData': user_data 
+                })
+
+    return jsonify([])
 
 
 

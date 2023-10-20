@@ -4,9 +4,14 @@ from boto3.dynamodb.conditions import Key, Attr
 class DynamoMessageRepo:
     """Persistence layer abstraction for messages."""
     
-    def __init__(self):
-        self.dynamodb = boto3.resource('dynamodb')
-        self.message_tablename = "MessageTable"
+    def __init__(self,aws_access_key_id,aws_secret_access_key,aws_region_name):
+        self.dynamodb = boto3.resource(
+                'dynamodb',
+                region_name=aws_region_name,
+                aws_access_key_id=aws_access_key_id,
+                aws_secret_access_key=aws_secret_access_key
+            )
+        self.message_tablename = "MessageTable_test2"
         self.table = self.dynamodb.Table(self.message_tablename)
         self._ensure_table_exists(self.message_tablename)
         
@@ -37,21 +42,17 @@ class DynamoMessageRepo:
         )
         return {'results': response['Items']}
             
-    def create(self, timestamp, message, userEmail, receiverEmail, channelName, name, userId, avatar):
+    def create(self, timestamp, message, userEmail, receiverEmail, channelName, userInfo, receiverInfo):
         """Persist a message to the database."""
         
-        if name == "": name = userEmail
         item = {
             'channelName': channelName,  # Partition key
             'timestamp': timestamp,  # Sort key
-            'user': {
-                'userId': userId,
-                'name': name,
-                'avatar': avatar
-            },
             'message': message,
             'userEmail': userEmail,
             'receiverEmail': receiverEmail,
+            'userInfo': userInfo,
+            'receiverInfo': receiverInfo
         }
         
         self.table.put_item(Item=item)
@@ -61,9 +62,14 @@ class DynamoMessageRepo:
 class FriendRepo:
     """Persistence layer abstraction for friend list and unread messages."""
     
-    def __init__(self):
-        self.dynamodb = boto3.resource('dynamodb')
-        self.friend_tablename = "FriendTable"
+    def __init__(self,aws_access_key_id,aws_secret_access_key,aws_region_name):
+        self.dynamodb = boto3.resource(
+                'dynamodb',
+                region_name=aws_region_name,
+                aws_access_key_id=aws_access_key_id,
+                aws_secret_access_key=aws_secret_access_key
+            )        
+        self.friend_tablename = "FriendTable6"
         self.table = self.dynamodb.Table(self.friend_tablename)
         self._ensure_table_exists(self.friend_tablename)
         
@@ -92,7 +98,7 @@ class FriendRepo:
             return response['Item']  
         else: # If the user does not have friends, create a new entry for him / her.
             self.table.put_item(Item={'userEmail': userEmail, 'friends': []})
-            return []
+            return {'userEmail': userEmail, 'friends': []}
 
     def add_friend(self, userEmail, friend_data):
         """Add a new friend to the user's friend list."""
