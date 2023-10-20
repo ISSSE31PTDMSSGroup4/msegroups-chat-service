@@ -3,10 +3,18 @@
     import Pusher from 'pusher-js';
 
     let pusher;
+
+    // Chat Implementation - Chat Channel 
     let channel;
     let prevChannelName;
 
-    let userEmail = 'username@gmail.com';
+
+    // Friend Implementation - Friend Channel
+    let friendChannel;
+    let prevFriendChannelName;
+
+
+    let userEmail = 'ken@gmail.com';
     let receiverEmail = "";
     let message = '';
 
@@ -28,13 +36,13 @@
                         userID: 1
                     };
 
-    // 模拟的朋友列表数据
+    // Friend Implementation - Placeholder for friend list
     let friends = [
 
     ];
 
 
-    // Chat Implementation - Setup Pusher when the component is mounted
+    // Chat / Friend Implementation - Setup Pusher when the component is mounted
     onMount(async () => {
         Pusher.logToConsole = true;
 
@@ -46,6 +54,16 @@
         {
             cluster: config.cluster,
         });
+
+
+        // Assume the chat page has already get the main user email from somewhere else
+        // Friend Implementation - Fetch friend list for the main user when the page is loaded
+        fetchFriendList(mainUserInfo["email"]);
+
+        // Friend Implementation - Subscribe to the friend channel for the main user; Update automatically when adding new friend.
+        friendChannel = pusher.subscribe(mainUserInfo["email"]);
+        prevFriendChannelName = mainUserInfo["email"];
+        friendChannel.bind('friend', data => receiveNewFriend(data));
     })
 
     // Chat implementation - Send Message
@@ -84,8 +102,6 @@
 
         // Join with a delimiter
         const channelName = sortedUsernames[0] + "-" + sortedUsernames[1];
-        
-        console.log(channelName);
 
         return channelName;
     }
@@ -108,7 +124,7 @@
     }
 
     // Friend implementation - Get Friend List
-    const fetchFirnedList = async () => {
+    const fetchFriendList = async () => {
         const response = await fetch(base_url + '/api/chat/friendlist',{
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
@@ -123,6 +139,14 @@
         console.log(friends)
     }
 
+        // Friend implementation - Triggered by pusher friend channel; Add new friend to the existing list
+        const receiveNewFriend = (data) => {
+        console.log("receiveNewFriend triggered");
+        console.log(data);
+        friends = [...friends, data];
+    }
+
+
 
     // Chat implementation - UI messages update helper
     const receiveNewMessage = (data) =>{
@@ -131,34 +155,45 @@
 
     // Chat implementation - Swicth the chatting user
     const switchReceiver = async () => {
-        console.log("userEmail: " + receiverEmail);
-        
         let newChannelName = getChannelName(userEmail, receiverEmail);
-
         if (channel) {
             channel.unbind('message'); 
             pusher.unsubscribe(prevChannelName); 
+            // Clear the messages in current window
+            messages = [];
         }
-
         channel = pusher.subscribe(newChannelName);
         
+        console.log("switchReceiver triggered: ", newChannelName)
+
         prevChannelName = newChannelName
 
         // Fetch chat history when switching receiver
         fetchHistory();
 
-        fetchFirnedList();
-
-        messages = [];
         channel.bind('message', data => receiveNewMessage(data));
 
     }
 
-    const switchMainUser = async () => {
-        mainUserInfo = {email: userEmail, avatar: 'https://mdbcdn.b-cdn.net/img/new/avatars/1.webp', name: 'Main User'}
+    const switchToChat = async (friend) => {
+        console.log("switchToChat triggered", friend.email);
+        receiverEmail = friend.email;  // 设置接收者的邮箱
+        switchReceiver();  // 切换聊天对象
     }
 
-    // Chat implementation - Time
+    const switchMainUser = async () => {
+        mainUserInfo = {email: userEmail, avatar: 'https://mdbcdn.b-cdn.net/img/new/avatars/1.webp', name: 'Main User'}
+        
+        friends = [];
+        friendChannel.unbind(prevFriendChannelName);
+        friendChannel = pusher.subscribe(mainUserInfo["email"]);
+
+        fetchFriendList();
+        prevFriendChannelName = mainUserInfo["email"];
+
+    }
+
+    // Chat implementation - Format (Unix Time * 1000) to readable format 
     function formatUnixTime(unixTime) {
         const milliseconds = unixTime;
 
@@ -178,11 +213,7 @@
 
 
 
-    function switchToChat(friend) {
-        console.log("switchToChat triggered", friend.email);
-        // receiverEmail = friend.email;  // 设置接收者的邮箱
-        // switchReceiver();  // 切换聊天对象
-    }
+
 
     //for debug
     const printMessages = () => {

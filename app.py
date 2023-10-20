@@ -190,9 +190,13 @@ def add_friend():
                                          friend_data= user_data)
     
     channel_name = user_email
+    # Add friend to the requester's friend list and update UI accordingly
+    pusher.trigger(user_email, 'newfriend', {
+            'userData': friend_data 
+        })
+    
     # Add rquester to the friend's friend list and update UI accordingly
-    pusher.trigger(channel_name, 'newfriend', {
-            'channelName': channel_name,
+    pusher.trigger(friend_email, 'newfriend', {
             'userData': user_data 
         })
 
