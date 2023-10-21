@@ -1,0 +1,14 @@
+# Directories
+.venv
+node_modules
+public
+scripts
+src
+__pycache__
+
+# Files
+messages.db
+output.txt
+package-lock.json
+package.json
+rollup.config.js

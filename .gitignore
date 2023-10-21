@@ -6,3 +6,5 @@ config.json
 .vscode
 messages.db
 __pycache__
+.idea
+.venv

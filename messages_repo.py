@@ -39,8 +39,8 @@ class MessagesRepo:
             'time': row[3],
             "message_id": row[4],
             "sender": row[5],
-            "receiver": row[6]
-        }
+            "receiver": row[6],
+            }
             
     def get_all(self, name, after_id=0):
         """Get all of the existing messages"""
