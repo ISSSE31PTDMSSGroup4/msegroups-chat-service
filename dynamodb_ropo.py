@@ -84,6 +84,7 @@ class FriendRepo:
                 ],
                 AttributeDefinitions=[
                     {'AttributeName': 'userEmail', 'AttributeType': 'S'},
+                    # {'AttributeName': 'currentChatFriend', 'AttributeType': 'S'},
                 ],
                 ProvisionedThroughput={
                     'ReadCapacityUnits': 10,

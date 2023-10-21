@@ -1,12 +1,52 @@
 from flask import Flask, render_template, request, jsonify, make_response, json
 from flask_cors import CORS
 from pusher import pusher
-import simplejson
 import time
+import os
+from dotenv import load_dotenv
+import json
+import argparse
+
+# Load environment variables
+load_dotenv()
+
+parser = argparse.ArgumentParser(description="Run the app with custom configurations.")
+parser.add_argument('--host', dest='host', default='0.0.0.0',
+                    help='The host/ip to run the app on.')
+parser.add_argument('--port', dest='port', type=int, default=5005,
+                    help='The port to run the app on.')
+args = parser.parse_args()
 
 # from messages_repo import MessagesRepo
-
 from dynamodb_ropo import DynamoMessageRepo,FriendRepo
+
+
+# Use local config file or not
+use_config_file = os.getenv("USE_CONFIG_FILE") == 'true'
+
+if use_config_file:
+    # Load from local json file
+    with open('config.json', 'r') as config_file:
+        config = json.load(config_file)
+else:
+    # Load from environment variables
+    config = {
+        "server": {
+            "app_id": os.getenv("SERVER_APP_ID"),
+            "key": os.getenv("SERVER_KEY"),
+            "secret": os.getenv("SERVER_SECRET"),
+            "cluster": os.getenv("SERVER_CLUSTER")
+        },
+        "aws": {
+            "aws_access_key_id": os.getenv("AWS_ACCESS_KEY_ID"),
+            "aws_secret_access_key": os.getenv("AWS_SECRET_ACCESS_KEY"),
+            "aws_region_name": os.getenv("AWS_REGION_NAME")
+        }
+    }
+
+aws_access_key_id = config["aws"]["aws_access_key_id"]
+aws_secret_access_key = config["aws"]["aws_secret_access_key"]
+aws_region_name = config["aws"]["aws_region_name"]
 
 app = Flask(__name__, template_folder='public')
 cors = CORS(app)
@@ -233,4 +273,4 @@ def add_multi_friend():
 
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=8000, debug=True)
+    app.run(host=args.host, port=args.port, debug=True)

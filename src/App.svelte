@@ -24,7 +24,7 @@
     let userId = 1;  // should be initialized based on your app's user data
 
     let messages = [];
-    let base_url = "http://localhost:8000";
+    let base_url = "http://localhost:5005";
 
     let newFriendEmail = "";
 
@@ -177,8 +177,8 @@
 
     const switchToChat = async (friend) => {
         console.log("switchToChat triggered", friend.email);
-        receiverEmail = friend.email;  // 设置接收者的邮箱
-        switchReceiver();  // 切换聊天对象
+        receiverEmail = friend.email;  // Update the receiverEmail
+        switchReceiver();  // Switch to the new receiverEmail
     }
 
     const switchMainUser = async () => {
@@ -190,7 +190,6 @@
 
         fetchFriendList();
         prevFriendChannelName = mainUserInfo["email"];
-
     }
 
     // Chat implementation - Format (Unix Time * 1000) to readable format 
@@ -209,10 +208,7 @@
         const formattedTime = `${year}-${month}-${day} ${hour}:${minute} ${ampm}`;
 
         return formattedTime;
-        }
-
-
-
+    }
 
 
     //for debug
