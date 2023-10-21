@@ -189,7 +189,6 @@ def add_friend():
         friend_repo.add_friend(userEmail=friend_email, 
                                          friend_data= user_data)
     
-    channel_name = user_email
     # Add friend to the requester's friend list and update UI accordingly
     pusher.trigger(user_email, 'newfriend', {
             'userData': friend_data 
