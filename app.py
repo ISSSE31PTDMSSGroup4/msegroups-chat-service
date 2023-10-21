@@ -10,13 +10,6 @@ import argparse
 # Load environment variables
 load_dotenv()
 
-parser = argparse.ArgumentParser(description="Run the app with custom configurations.")
-parser.add_argument('--host', dest='host', default='0.0.0.0',
-                    help='The host/ip to run the app on.')
-parser.add_argument('--port', dest='port', type=int, default=5005,
-                    help='The port to run the app on.')
-args = parser.parse_args()
-
 # from messages_repo import MessagesRepo
 from dynamodb_ropo import DynamoMessageRepo,FriendRepo
 
@@ -24,10 +17,14 @@ from dynamodb_ropo import DynamoMessageRepo,FriendRepo
 # Use local config file or not
 use_config_file = os.getenv("USE_CONFIG_FILE") == 'true'
 
+host = os.getenv('HOST', '0.0.0.0')
+port = int(os.getenv('PORT', '5005'))
+
 if use_config_file:
     # Load from local json file
     with open('config.json', 'r') as config_file:
         config = json.load(config_file)
+    host = 'localhost'
 else:
     # Load from environment variables
     config = {
@@ -43,6 +40,8 @@ else:
             "aws_region_name": os.getenv("AWS_REGION_NAME")
         }
     }
+
+
 
 aws_access_key_id = config["aws"]["aws_access_key_id"]
 aws_secret_access_key = config["aws"]["aws_secret_access_key"]
@@ -273,4 +272,4 @@ def add_multi_friend():
 
 
 if __name__ == '__main__':
-    app.run(host=args.host, port=args.port, debug=True)
+    app.run(host=host, port=port, debug=True)
