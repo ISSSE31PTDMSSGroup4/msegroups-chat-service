@@ -63,7 +63,7 @@
         // Friend Implementation - Subscribe to the friend channel for the main user; Update automatically when adding new friend.
         friendChannel = pusher.subscribe(mainUserInfo["email"]);
         prevFriendChannelName = mainUserInfo["email"];
-        friendChannel.bind('friend', data => receiveNewFriend(data));
+        friendChannel.bind('newfriend', data => receiveNewFriend(data));
     })
 
     // Chat implementation - Send Message
@@ -139,11 +139,47 @@
         console.log(friends)
     }
 
-        // Friend implementation - Triggered by pusher friend channel; Add new friend to the existing list
-        const receiveNewFriend = (data) => {
+    // Friend implementation - Triggered by pusher friend channel; Add new friend to the existing list
+    const receiveNewFriend = async(data) => {
         console.log("receiveNewFriend triggered");
         console.log(data);
         friends = [...friends, data];
+    }
+
+
+    // Chat implementation - Send Message
+    const addNewFriend = async () => {
+        console.log("addNewFriend triggered");
+
+        const message_body = JSON.stringify({
+            userEmail,  // the email of the user sending the message
+            userData: {
+                email: mainUserInfo["email"],  
+                name: mainUserInfo["name"],   // the user's name from your system
+                avatar: mainUserInfo["avatar"],  // the user's avatar URL
+                unread: 0, //这两个在实际implementation里也默认都填0即可，因为是新好友
+                lastReadTime: 0,
+                status: "online" //不会被实际用到，去掉也可以
+
+            },
+            friendData:{ // 在dummy app中只有friendEmail会被backend用到，其他信息都是hardcode的，假设其他信息之后都能从Profile拿到在这里填入
+                    avatar: 'https://mdbcdn.b-cdn.net/img/new/avatars/5.webp', 
+                    name: 'Lucy',
+                    userId: 1,
+                    email: newFriendEmail,
+                    unread: 0, //这两个在实际implementation里也默认都填0即可，因为是新好友
+                    lastReadTime: 0,
+                    status: "online" //不会被实际用到，去掉也可以
+            },
+        });
+
+        await fetch(base_url+'/api/chat/addfriend', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: message_body
+        });
+
+        message = '';  // clear the message input after successful sending
     }
 
 
@@ -175,12 +211,14 @@
 
     }
 
+    // Chat implementation - switch the chatting user by click friend avatar
     const switchToChat = async (friend) => {
         console.log("switchToChat triggered", friend.email);
         receiverEmail = friend.email;  // Update the receiverEmail
         switchReceiver();  // Switch to the new receiverEmail
     }
 
+    // Chat implementation - 模拟用户重新登陆的过程测试好友列表用，implementation时用不到
     const switchMainUser = async () => {
         mainUserInfo = {email: userEmail, avatar: 'https://mdbcdn.b-cdn.net/img/new/avatars/1.webp', name: 'Main User'}
         
@@ -221,7 +259,7 @@
 </script>
 <div class="container">
 
-    <!-- Friend List Implementation -->
+    <!-- Friend List UI Implementation -->
     <div class="friend-list">
         <h2>Main User</h2>
         <div class="friend">
@@ -247,6 +285,7 @@
     </div>
 
 
+        <!-- Chat Window UI Implementation -->
     <div class="d-flex flex-column align-items-stretch flex-shrink-0 bg-white">
         <div class="d-flex align-items-center flex-shrink-0 p-3 link-dark text-decoration-none border-bottom">
             <input class="fs-5 fw-semibold" placeholder="Main user email" bind:value={userEmail}/>
@@ -272,7 +311,7 @@
     <input class="form-control" placeholder="Switch receiverEmail" bind:value={receiverEmail}/>
     <button type="button" on:click={switchReceiver}>Switch to new receiverEmail</button> 
     <input class="form-control" placeholder="New friend email" bind:value={newFriendEmail}/>
-    <button type="button" on:click={printMessages}>Add New Friend</button> 
+    <button type="button" on:click={addNewFriend}>Add New Friend</button> 
 </div>
 
 <style>

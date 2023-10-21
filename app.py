@@ -229,14 +229,10 @@ def add_friend():
                                          friend_data= user_data)
     
     # Add friend to the requester's friend list and update UI accordingly
-    pusher.trigger(user_email, 'newfriend', {
-            'userData': friend_data 
-        })
+    pusher.trigger(user_email, 'newfriend', friend_data)
     
     # Add rquester to the friend's friend list and update UI accordingly
-    pusher.trigger(friend_email, 'newfriend', {
-            'userData': user_data 
-        })
+    pusher.trigger(friend_email, 'newfriend', user_data)
 
     return jsonify([])
 
