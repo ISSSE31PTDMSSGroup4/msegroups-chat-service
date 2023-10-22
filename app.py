@@ -94,9 +94,9 @@ def get_channel_name(username1, username2):
     return channel_name
 
 def allow_cors_policy(response):
-    # response.headers.add('Access-Control-Allow-Origin', '*')
-    # response.headers.add('Access-Control-Allow-Headers', '*')
-    # response.headers.add('Access-Control-Allow-Methods', '*')
+    response.headers.add('Access-Control-Allow-Origin', '*')
+    response.headers.add('Access-Control-Allow-Headers', '*')
+    response.headers.add('Access-Control-Allow-Methods', '*')
     return response
 
 
@@ -280,3 +280,4 @@ def add_multi_friend():
 
 if __name__ == '__main__':
     app.run(host=host, port=port, debug=True)
+
