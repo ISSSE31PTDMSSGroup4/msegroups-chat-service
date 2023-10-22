@@ -47,7 +47,7 @@
         Pusher.logToConsole = true;
 
         // Fetch Pusher configuration from the backend
-        const response = await fetch(base_url+'/api/chat/config');
+        const response = await fetch(base_url+'/api/chat/config/');
         const config = await response.json();
 
         pusher = new Pusher(config.key, // pusher key
@@ -86,7 +86,7 @@
             receiverEmail,  // the email of the message recipient
         });
 
-        await fetch(base_url+'/api/chat/message', {
+        await fetch(base_url+'/api/chat/message/', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: message_body
@@ -108,7 +108,7 @@
 
     // Chat implementation - Get chat history
     const fetchHistory = async () => {
-        const response = await fetch(base_url + '/api/chat/history',{
+        const response = await fetch(base_url + '/api/chat/history/',{
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({
@@ -125,7 +125,7 @@
 
     // Friend implementation - Get Friend List
     const fetchFriendList = async () => {
-        const response = await fetch(base_url + '/api/chat/friendlist',{
+        const response = await fetch(base_url + '/api/chat/friendlist/',{
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({
@@ -173,7 +173,7 @@
             },
         });
 
-        await fetch(base_url+'/api/chat/addfriend', {
+        await fetch(base_url+'/api/chat/addfriend/', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: message_body
