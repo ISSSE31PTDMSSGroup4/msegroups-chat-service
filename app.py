@@ -48,9 +48,9 @@ aws_access_key_id = config["aws"]["aws_access_key_id"]
 aws_secret_access_key = config["aws"]["aws_secret_access_key"]
 aws_region_name = config["aws"]["aws_region_name"]
 
-app = Flask(__name__, template_folder='public')
-app.config['CORS_HEADERS'] = 'Content-Type'
-cors = CORS(app, supports_credentials=True, resources={r"/*": {"origins": "*", "allow_headers": "*", "methods": "*"}})
+app = Flask(__name__)
+# app.config['CORS_HEADERS'] = 'Content-Type'
+CORS(app)
 # cors = CORS(app,
 #             allow_headers = ["CORS_ORIGINS", "CORS_METHODS", "CORS_HEADERS"]
 #             )
