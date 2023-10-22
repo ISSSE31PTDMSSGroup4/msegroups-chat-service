@@ -118,7 +118,7 @@ def send_messages():
     timestamp = int(round(time.time(),3)*1000)  # Current Unix time
     message = data['message']
     
-    x_user = request.headers.get('X-User')
+    x_user = request.headers.get('X-USER')
     if x_user is None: user_email = data['userEmail']
     else: user_email = x_user
 
@@ -145,16 +145,8 @@ def send_messages():
     pusher.trigger(channel_name, 'message', {
             'channelName': channel_name,  # Partition key
             'timestamp': timestamp,  # Sort key
-            'userInfo': {
-                'userId': user_info['userId'],
-                'name': user_info['avatar'],
-                'avatar': user_info['name'],
-            },
-            'receiverInfo': {  
-                'userId': receiver_info['userId'],
-                'name': receiver_info['avatar'],
-                'avatar': receiver_info['name'],
-            },
+            'userInfo': user_info,
+            'receiverInfo': receiver_info,
             'message': message,
             'userEmail': user_email,
             'receiverEmail': receiver_email,
@@ -166,7 +158,7 @@ def send_messages():
 def get_history():
 
     data = request.json
-    x_user = request.headers.get('X-User')
+    x_user = request.headers.get('X-USER')
 
     if x_user is None: username = data['userEmail']
     else: username = x_user
@@ -185,16 +177,8 @@ def get_history():
             messages.append({
                 'channelName': r["channelName"],  # Partition key
                 'timestamp': int(r["timestamp"]),  # Sort key
-                'user': {
-                    'userId': r['userInfo']["userId"],
-                    'name': r['userInfo']["name"],
-                    'avatar': r['userInfo']["avatar"],
-                }, 
-                'receiverInfo': {  
-                    'userId': r['receiverInfo']['userId'],
-                    'name': r['receiverInfo']['name'],
-                    'avatar': r['receiverInfo']['avatar'],
-                },
+                'userInfo': r['userInfo'], 
+                'receiverInfo':r['receiverInfo'],
                 'message': r["message"],
                 'userEmail': r["userEmail"],
                 'receiverEmail': r["receiverEmail"],
@@ -203,12 +187,13 @@ def get_history():
         return allow_cors_policy(jsonify(messages))
     else: # if there is no message history
         return allow_cors_policy(jsonify([]))
+        
     
 @app.route('/api/chat/friendlist/', methods=['POST'])
 def get_friend_list():
     data = request.json
 
-    x_user = request.headers.get('X-User')
+    x_user = request.headers.get('X-USER')
     if x_user is None: user_email = data['userEmail']
     else: user_email = x_user
 
@@ -225,7 +210,7 @@ def get_friend_list():
 def add_friend():
     data = request.json
 
-    x_user = request.headers.get('X-User')
+    x_user = request.headers.get('X-USER')
     if x_user is None: user_email = data['userEmail']
     else: user_email = x_user
     user_data = data['userData']
@@ -251,7 +236,7 @@ def add_friend():
 @app.route('/api/chat/addfriend-multi/', methods=['POST'])
 def add_multi_friend():
 
-    x_user = request.headers.get('X-User')
+    x_user = request.headers.get('X-USER')
     if x_user is None: user_email = request.json['userEmail']
     else: user_email = x_user
     user_data = request.json['userData']
