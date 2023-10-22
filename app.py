@@ -20,6 +20,7 @@ use_config_file = os.getenv("USE_CONFIG_FILE") == 'true'
 host = os.getenv('HOST', '0.0.0.0')
 port = int(os.getenv('PORT', '5005'))
 
+
 if use_config_file:
     # Load from local json file
     with open('config.json', 'r') as config_file:
@@ -48,8 +49,11 @@ aws_secret_access_key = config["aws"]["aws_secret_access_key"]
 aws_region_name = config["aws"]["aws_region_name"]
 
 app = Flask(__name__, template_folder='public')
-cors = CORS(app)
 app.config['CORS_HEADERS'] = 'Content-Type'
+cors = CORS(app, supports_credentials=True, resources={r"/*": {"origins": "*", "allow_headers": "*", "methods": "*"}})
+# cors = CORS(app,
+#             allow_headers = ["CORS_ORIGINS", "CORS_METHODS", "CORS_HEADERS"]
+#             )
 
 
 # use_local_db = True
@@ -89,13 +93,20 @@ def get_channel_name(username1, username2):
     channel_name = sorted_usernames[0] + "-" + sorted_usernames[1]
     return channel_name
 
+def allow_cors_policy(response):
+    # response.headers.add('Access-Control-Allow-Origin', '*')
+    # response.headers.add('Access-Control-Allow-Headers', '*')
+    # response.headers.add('Access-Control-Allow-Methods', '*')
+    return response
+
+
 @app.route('/api/chat/config/', methods=['GET'])
 def get_pusher_config():
     # Return pusher config info
-    return jsonify({
+    return allow_cors_policy(jsonify({
         "key": config["server"]["key"],
         "cluster": config["server"]["cluster"]
-    })
+    }))
 
 @app.route('/api/chat/message/', methods=['POST'])
 def send_messages():
@@ -149,7 +160,7 @@ def send_messages():
             'receiverEmail': receiver_email,
         })
 
-    return jsonify({'status': 'success', 'message': 'Operation was successful'}), 200
+    return allow_cors_policy(jsonify({'status': 'success', 'message': 'Operation was successful'})), 200
 
 @app.route('/api/chat/history/', methods=['POST'])
 def get_history():
@@ -189,9 +200,9 @@ def get_history():
                 'receiverEmail': r["receiverEmail"],
             })
 
-        return jsonify(messages)
+        return allow_cors_policy(jsonify(messages))
     else: # if there is no message history
-        return jsonify([])
+        return allow_cors_policy(jsonify([]))
     
 @app.route('/api/chat/friendlist/', methods=['POST'])
 def get_friend_list():
@@ -234,7 +245,7 @@ def add_friend():
     # Add rquester to the friend's friend list and update UI accordingly
     pusher.trigger(friend_email, 'newfriend', user_data)
 
-    return jsonify([])
+    return allow_cors_policy(jsonify([]))
 
 
 @app.route('/api/chat/addfriend-multi/', methods=['POST'])
@@ -263,7 +274,7 @@ def add_multi_friend():
                     'userData': user_data 
                 })
 
-    return jsonify([])
+    return allow_cors_policy(jsonify([]))
 
 
 
