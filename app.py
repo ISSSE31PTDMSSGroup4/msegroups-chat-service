@@ -89,7 +89,7 @@ def get_channel_name(username1, username2):
     channel_name = sorted_usernames[0] + "-" + sorted_usernames[1]
     return channel_name
 
-@app.route('/api/chat/config', methods=['GET'])
+@app.route('/api/chat/config/', methods=['GET'])
 def get_pusher_config():
     # Return pusher config info
     return jsonify({
@@ -97,7 +97,7 @@ def get_pusher_config():
         "cluster": config["server"]["cluster"]
     })
 
-@app.route('/api/chat/message', methods=['POST'])
+@app.route('/api/chat/message/', methods=['POST'])
 def send_messages():
     data = request.json
 
@@ -151,7 +151,7 @@ def send_messages():
 
     return jsonify({'status': 'success', 'message': 'Operation was successful'}), 200
 
-@app.route('/api/chat/history', methods=['POST'])
+@app.route('/api/chat/history/', methods=['POST'])
 def get_history():
 
     data = request.json
@@ -181,8 +181,8 @@ def get_history():
                 }, 
                 'receiverInfo': {  
                     'userId': r['receiverInfo']['userId'],
-                    'name': r['receiverInfo']['avatar'],
-                    'avatar': r['receiverInfo']['name'],
+                    'name': r['receiverInfo']['name'],
+                    'avatar': r['receiverInfo']['avatar'],
                 },
                 'message': r["message"],
                 'userEmail': r["userEmail"],
@@ -193,7 +193,7 @@ def get_history():
     else: # if there is no message history
         return jsonify([])
     
-@app.route('/api/chat/friendlist', methods=['POST'])
+@app.route('/api/chat/friendlist/', methods=['POST'])
 def get_friend_list():
     data = request.json
 
@@ -210,7 +210,7 @@ def get_friend_list():
     else:
         return jsonify([])
 
-@app.route('/api/chat/addfriend', methods=['POST'])
+@app.route('/api/chat/addfriend/', methods=['POST'])
 def add_friend():
     data = request.json
 
@@ -237,7 +237,7 @@ def add_friend():
     return jsonify([])
 
 
-@app.route('/api/chat/addfriend-multi', methods=['POST'])
+@app.route('/api/chat/addfriend-multi/', methods=['POST'])
 def add_multi_friend():
 
     x_user = request.headers.get('X-User')
