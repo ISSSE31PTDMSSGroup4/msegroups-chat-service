@@ -217,9 +217,9 @@ def get_friend_list():
         results = friend_repo.get_all_friends(userEmail=user_email)
     
     if results != []:
-        return jsonify(results["friends"])
+        return allow_cors_policy(jsonify(results["friends"]))
     else:
-        return jsonify([])
+        return allow_cors_policy(jsonify([]))
 
 @app.route('/api/chat/addfriend/', methods=['POST'])
 def add_friend():
