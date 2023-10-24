@@ -85,6 +85,9 @@ pusher = pusher_client = pusher.Pusher(
   ssl=True
 )
 
+
+
+
 def get_channel_name(username1, username2):
     # Sort the usernames
     sorted_usernames = sorted([username1, username2])
@@ -98,6 +101,22 @@ def allow_cors_policy(response):
     response.headers.add('Access-Control-Allow-Headers', '*')
     response.headers.add('Access-Control-Allow-Methods', '*')
     return response
+
+@app.route('/api/chat/auth/', methods=['POST'])
+def pusher_authentication():
+    user_email = request.form['email']  # 假设 'email' 是传递的参数名
+    channel_name = request.form['channel_name']
+    socket_id = request.form['socket_id']
+
+    auth_token = pusher_client.authenticate(
+        channel=channel_name,
+        socket_id=socket_id,
+        custom_data={
+            "user_id": user_email  # 用 "user_id" 替代 "email"，因为这是 Pusher 的标准字段
+        }
+    )
+    
+    return allow_cors_policy(jsonify(auth_token))
 
 
 @app.route('/api/chat/config/', methods=['GET'])
@@ -126,6 +145,13 @@ def send_messages():
 
     user_info = data['userInfo']
     receiver_info = data["receiverInfo"]
+
+    current_chat_friend = friend_repo.get_current_chat(userEmail=receiver_email)
+
+    if receiver_info["status"] == "offline" or current_chat_friend != user_email:
+        # Add unread message to the receiver's unread message list
+        # If the receiver is offline or the receiver does not open chat window with sender
+        friend_repo.add_unread(userEmail=receiver_email, friendEmail=user_email)
 
     channel_name = get_channel_name(user_email, receiver_email)
     
@@ -171,18 +197,21 @@ def get_history():
         results = repo.get_all(channelName=channel_name)["results"]
 
     messages = []
-    
+    friend_repo.clear_unread(username,receiver)
     if(results): # If there is message history
+        last_r = results[-1]
         for r in results:
             messages.append({
                 'channelName': r["channelName"],  # Partition key
                 'timestamp': int(r["timestamp"]),  # Sort key
-                'userInfo': r['userInfo'], 
-                'receiverInfo':r['receiverInfo'],
+                'userInfo': last_r['userInfo'], 
+                'receiverInfo':last_r['receiverInfo'],
                 'message': r["message"],
                 'userEmail': r["userEmail"],
                 'receiverEmail': r["receiverEmail"],
             })
+
+        
 
         return allow_cors_policy(jsonify(messages))
     else: # if there is no message history
@@ -223,6 +252,9 @@ def add_friend():
                                          friend_data= friend_data)
         friend_repo.add_friend(userEmail=friend_email, 
                                          friend_data= user_data)
+        
+    friend_repo.clear_unread(user_email,friend_email)
+    friend_repo.clear_unread(friend_email,user_email)
     
     # Add friend to the requester's friend list and update UI accordingly
     pusher.trigger(user_email, 'newfriend', friend_data)
@@ -261,6 +293,17 @@ def add_multi_friend():
 
     return allow_cors_policy(jsonify([]))
 
+@app.route('/api/chat/lastchat/', methods=['POST'])
+def update_last_chet():
+    x_user = request.headers.get('X-USER')
+    if x_user is None: user_email = request.json['userEmail']
+    else: user_email = x_user
+
+    last_chat_friend = request.json["receiverEmail"]
+
+    friend_repo.update_current_chat(userEmail=user_email,currentChatFriend=last_chat_friend)
+
+    return allow_cors_policy(jsonify([]))
 
 
 if __name__ == '__main__':

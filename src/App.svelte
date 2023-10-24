@@ -41,6 +41,10 @@
 
     ];
 
+    /// NEW - Online user list
+    let onlineUsers = [];
+    let config;
+
 
     // Chat / Friend Implementation - Setup Pusher when the component is mounted
     onMount(async () => {
@@ -48,13 +52,17 @@
 
         // Fetch Pusher configuration from the backend
         const response = await fetch(base_url+'/api/chat/config/');
-        const config = await response.json();
+        config = await response.json();
 
-        pusher = new Pusher(config.key, // pusher key
-        {
+
+        // New - need to update the pusher setup method
+        pusher = new Pusher(config.key, {
             cluster: config.cluster,
+            authEndpoint: base_url + "/api/chat/auth/",
+            auth: {
+                params: { email: userEmail },  // 无需 JSON.stringify，直接发送对象即可
+            },
         });
-
 
         // Assume the chat page has already get the main user email from somewhere else
         // Friend Implementation - Fetch friend list for the main user when the page is loaded
@@ -64,7 +72,87 @@
         friendChannel = pusher.subscribe(mainUserInfo["email"]);
         prevFriendChannelName = mainUserInfo["email"];
         friendChannel.bind('newfriend', data => receiveNewFriend(data));
+
+        
     })
+
+
+    // New - Subscribe to the presence channnel to check the login status
+    const subscribeOnlineChannel = async() => {
+        
+        // 订阅 presence 频道
+        var presenceChannel = pusher.subscribe('presence-online');
+
+        // 当用户连接时更新在线用户列表
+        presenceChannel.bind('pusher:member_added', function(member) {
+            // 用户上线，添加到在线列表
+            onlineUsers = [...onlineUsers, member.id]; // 假设 member 对象有一个 ID 属性
+            checkOnlineStatus(member.id, "online");
+            rankOnlineUsers();
+            console.log(member.id + " is online");
+            console.log("onlineUsers: " + onlineUsers);
+        });
+
+        // 当用户断开连接时更新在线用户列表
+        presenceChannel.bind('pusher:member_removed', function(member) {
+            // 用户下线，从在线列表中移除
+            onlineUsers = onlineUsers.filter(id => id !== member.id);
+            checkOnlineStatus(member.id, "offline");
+            rankOnlineUsers();
+            console.log(member.id + " is offline");
+            console.log("onlineUsers: " + onlineUsers);
+        });
+
+        // 获取初始的在线用户列表
+        presenceChannel.bind('pusher:subscription_succeeded', function(members) {
+            onlineUsers = Object.keys(members.members);
+            updateOnlineStatus();
+            rankOnlineUsers();
+            console.log("onlineUsers: " + onlineUsers);
+            console.log(typeof(onlineUsers));
+        });
+    }
+
+    // New - 正式版应该用不到
+    const unsubscribeOnlineChannel = async() => {
+        pusher.unsubscribe('presence-online');
+    }
+    
+
+    const updateOnlineStatus = () => {
+        friends.forEach(friend => {
+            console.log("onlineUsers: " + onlineUsers);
+            console.log("friend.email: " + friend.email);
+            if (onlineUsers.includes(friend.email)){
+                friend.status = "online";
+            } else {
+                friend.status = "offline";
+            }
+        })
+    }
+
+    const checkOnlineStatus = (id, status) => {
+        friends.forEach(friend => {
+            if (friend.email == id){
+                friend.status = status;
+            }
+        })
+    }
+
+    const rankOnlineUsers = () => {
+        // Move the online users to the front of the list
+        let onlineFriends = [];
+        let offlineFriends = [];
+        friends.forEach(friend => {
+            if (friend.status == "online"){
+                onlineFriends = [...onlineFriends, friend];
+            } else {
+                offlineFriends = [...offlineFriends, friend];
+            }
+        })
+        friends = [...onlineFriends, ...offlineFriends];
+    }
+
 
     // Chat implementation - Send Message
     const submit = async () => {
@@ -79,7 +167,8 @@
             receiverInfo:{
                     avatar: 'https://mdbcdn.b-cdn.net/img/new/avatars/5.webp', 
                     name: 'Lucy',
-                    userId: 1
+                    userId: 1,
+                    status: friends.find(friend => friend.email == receiverEmail).status,
             },
             message,  // the message text
             userEmail,  // the email of the user sending the message
@@ -135,6 +224,8 @@
         const data = await response.json();
         if (data && data.length > 0) {
                 friends = data;
+                subscribeOnlineChannel();
+                
             }
         console.log(friends)
     }
@@ -206,9 +297,25 @@
 
         // Fetch chat history when switching receiver
         fetchHistory();
-
         channel.bind('message', data => receiveNewMessage(data));
 
+        // New - when switch receiver, update the last chat friend to db for main user
+        updateLastChatFriend();
+    }
+
+
+    // New - update lats chat function
+    const updateLastChatFriend = async () =>{
+        const message_body = JSON.stringify({
+            userEmail,  
+            receiverEmail, // new receiver email
+        });
+
+        await fetch(base_url+'/api/chat/lastchat/', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: message_body
+        });
     }
 
     // Chat implementation - switch the chatting user by click friend avatar
@@ -224,10 +331,22 @@
         
         friends = [];
         friendChannel.unbind(prevFriendChannelName);
+
+        unsubscribeOnlineChannel();
+
+        // New - need to update the pusher setup method
+         pusher = new Pusher(config.key, {
+            cluster: config.cluster,
+            authEndpoint: base_url + "/api/chat/auth/",
+            auth: {
+                params: { email: userEmail },  // 无需 JSON.stringify，直接发送对象即可
+            },
+        });
         friendChannel = pusher.subscribe(mainUserInfo["email"]);
 
         fetchFriendList();
         prevFriendChannelName = mainUserInfo["email"];
+
     }
 
     // Chat implementation - Format (Unix Time * 1000) to readable format 
@@ -278,6 +397,7 @@
                         <div class="friend-name">{friend.name}</div>
                         <div class="friend-email">{friend.email}</div>
                         <div class="friend-email">unread: {friend.unread}</div>
+                        <div class="friend-email">{friend.status}</div>
                     </div>
                 </div>
             {/each}

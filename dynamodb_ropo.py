@@ -58,7 +58,6 @@ class DynamoMessageRepo:
         self.table.put_item(Item=item)
         return item
 
-
 class FriendRepo:
     """Persistence layer abstraction for friend list and unread messages."""
     
@@ -127,15 +126,65 @@ class FriendRepo:
                 ReturnValues="UPDATED_NEW"
             )
 
-    def update_last_read(self, userEmail, friend_email, lastReadTime, unread):
+    def add_unread(self, userEmail, friendEmail):
         """Update the lastReadTime and unread count for a given friend."""
-        current_friends = self.get_all_friends(userEmail)
+        current_friends = self.get_all_friends(userEmail)["friends"]
+        for friend in current_friends:
+            if friend['email'] == friendEmail:
+                if "unread" not in friend or type(friend['unread']) != int or type(friend['unread']) != float:
+                    friend['unread'] = 1
+                else:
+                    friend['unread'] += 1
+                break
+        self.table.update_item(
+                Key={
+                    'userEmail': userEmail  # Partition key
+                },
+                UpdateExpression="SET friends = :f",
+                ExpressionAttributeValues={
+                    ':f': current_friends
+                },
+                ReturnValues="UPDATED_NEW"
+            )
+    
+    def clear_unread(self, userEmail, friend_email):
+        """Update the lastReadTime and unread count for a given friend."""
+        current_friends = self.get_all_friends(userEmail)["friends"]
         for friend in current_friends:
             if friend['email'] == friend_email:
-                friend['lastReadTime'] = lastReadTime
-                friend['unread'] = unread
+                friend['unread'] = 0
                 break
-        self.table.put_item(Item={'userEmail': userEmail, 'friends': current_friends})
+        self.table.update_item(
+                Key={
+                    'userEmail': userEmail  # Partition key
+                },
+                UpdateExpression="SET friends = :f",
+                ExpressionAttributeValues={
+                    ':f': current_friends
+                },
+                ReturnValues="UPDATED_NEW"
+            )
+
+    def update_current_chat(self, userEmail, currentChatFriend):
+        """Update the last chat frind for a given user ."""
+        self.table.update_item(
+                Key={
+                    'userEmail': userEmail  # Partition key
+                },
+                UpdateExpression="SET currentChatFriend = :f",
+                ExpressionAttributeValues={
+                    ':f': currentChatFriend
+                },
+                ReturnValues="UPDATED_NEW"
+            )
+
+    def get_current_chat(self,userEmail):
+        """Get the last chat friend for a given user ."""
+        current_friends = self.get_all_friends(userEmail)
+        if current_friends and "currentChatFriend" in current_friends:
+            return current_friends["currentChatFriend"]
+        else:
+            return None
 
 # Example usage:
 # repo = FriendRepo()
