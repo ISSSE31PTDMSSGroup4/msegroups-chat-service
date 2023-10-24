@@ -131,7 +131,7 @@ class FriendRepo:
         current_friends = self.get_all_friends(userEmail)["friends"]
         for friend in current_friends:
             if friend['email'] == friendEmail:
-                if "unread" not in friend or type(friend['unread']) != int or type(friend['unread']) != float:
+                if "unread" not in friend:
                     friend['unread'] = 1
                 else:
                     friend['unread'] += 1

@@ -104,7 +104,7 @@ def allow_cors_policy(response):
 
 @app.route('/api/chat/auth/', methods=['POST'])
 def pusher_authentication():
-    user_email = request.form['email']  # 假设 'email' 是传递的参数名
+    user_email = request.form['email']  
     channel_name = request.form['channel_name']
     socket_id = request.form['socket_id']
 
@@ -112,7 +112,7 @@ def pusher_authentication():
         channel=channel_name,
         socket_id=socket_id,
         custom_data={
-            "user_id": user_email  # 用 "user_id" 替代 "email"，因为这是 Pusher 的标准字段
+            "user_id": user_email 
         }
     )
     
@@ -151,6 +151,7 @@ def send_messages():
     if receiver_info["status"] == "offline" or current_chat_friend != user_email:
         # Add unread message to the receiver's unread message list
         # If the receiver is offline or the receiver does not open chat window with sender
+        print("unread triggered")
         friend_repo.add_unread(userEmail=receiver_email, friendEmail=user_email)
 
     channel_name = get_channel_name(user_email, receiver_email)
