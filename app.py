@@ -6,6 +6,7 @@ import os
 from dotenv import load_dotenv
 import json
 import argparse
+import traceback
 
 # Load environment variables
 load_dotenv()
@@ -152,9 +153,11 @@ def send_messages():
         # Add unread message to the receiver's unread message list
         # If the receiver is offline or the receiver does not open chat window with sender
         friend_repo.add_unread(userEmail=receiver_email, friendEmail=user_email)
-        unread = "True"
-    else:
-        unread = "False"
+
+        pusher.trigger(receiver_email, 'unread', {
+            'senderEmail': user_email,
+        })
+
     channel_name = get_channel_name(user_email, receiver_email)
     
     if use_dynamodb: 
@@ -178,7 +181,6 @@ def send_messages():
             'message': message,
             'userEmail': user_email,
             'receiverEmail': receiver_email,
-            'unread': unread
         })
 
     return allow_cors_policy(jsonify({'status': 'success', 'message': 'Operation was successful'})), 200
@@ -329,15 +331,17 @@ def update_user_info():
     if not user_email or not new_user_data:
         return allow_cors_policy(jsonify({'error': 'Invalid data received'}))
 
-    # try:
-    # Use the FriendRepo to update the user data across all friends' lists
-    friend_repo.update_friend_data_for_others(updateUserEmail=user_email, updateUserData=new_user_data)
+    try:
+        # Use the FriendRepo to update the user data across all friends' lists
+        friend_repo.update_friend_data_for_others(updateUserEmail=user_email, updateUserData=new_user_data)
 
-    # Return a success response
-    return allow_cors_policy(jsonify({'status': 'success', 'message': 'User data updated successfully'}))
-    # except Exception as e:
-    #     # Handle any exceptions that occur during the update process
-    #     return allow_cors_policy(jsonify({'error': 'An error occurred while updating data', 'details': str(e)}))
+        # Return a success response
+        return allow_cors_policy(jsonify({'status': 'success', 'message': 'User data updated successfully'}))
+    except Exception as e:
+        # Handle any exceptions that occur during the update process
+        error_info = traceback.format_exc()
+        print(error_info)
+        return allow_cors_policy(jsonify({'error': 'An error occurred while updating data', 'details': str(e)}))
 
 
 

@@ -50,6 +50,9 @@
     onMount(async () => {
         Pusher.logToConsole = true;
 
+        // New - 刚登录进主界面需要把last chat user清空
+        updateLastChatFriend("");
+
         // Fetch Pusher configuration from the backend
         const response = await fetch(base_url+'/api/chat/config/');
         config = await response.json();
@@ -73,7 +76,8 @@
         prevFriendChannelName = mainUserInfo["email"];
         friendChannel.bind('newfriend', data => receiveNewFriend(data));
 
-        
+        // New - unread notification channel
+        friendChannel.bind('unread', data => receiveUnread(data));    
     })
 
 
@@ -109,13 +113,12 @@
             updateOnlineStatus();
             rankOnlineUsers();
             console.log("onlineUsers: " + onlineUsers);
-            console.log(typeof(onlineUsers));
         });
     }
 
     // NEW - END
 
-    // New - 正式版应该用不到
+    // New - 正式版应该用不到,用于模拟重新登陆的过程测试的
     const unsubscribeOnlineChannel = async() => {
         pusher.unsubscribe('presence-online');
     }
@@ -123,8 +126,6 @@
 
     const updateOnlineStatus = () => {
         friends.forEach(friend => {
-            console.log("onlineUsers: " + onlineUsers);
-            console.log("friend.email: " + friend.email);
             if (onlineUsers.includes(friend.email)){
                 friend.status = "online";
             } else {
@@ -286,20 +287,6 @@
     // Chat implementation - UI messages update helper
     const receiveNewMessage = (data) =>{
         messages = [...messages, data];
-
-        console.log("卢浮宫")
-        console.log(data.unread);
-        // New - update the unread count
-        if(data.unread == "True"){
-            friends.forEach(friend => {
-                if (friend.email == data.userEmail){
-                    console.log(friend, unread);
-                    friend.unread += 1;
-                    rankOnlineUsers();
-                }
-            })
-        }
-        // New - END
     }
 
     // Chat implementation - Swicth the chatting user
@@ -322,15 +309,33 @@
         channel.bind('message', data => receiveNewMessage(data));
 
         // New - when switch receiver, update the last chat friend to db for main user
-        updateLastChatFriend();
+        updateLastChatFriend(receiverEmail);
+        friends.forEach(friend => {
+            if (friend.email == receiverEmail){
+                friend.unread = 0;
+                rankOnlineUsers();
+            }
+        })
+    }
+
+    // New - unread notification
+    const receiveUnread = (data) =>{
+        friends.forEach(friend => {
+            if (friend.email == data.senderEmail){
+                friend.unread += 1;
+
+                // 其他对含有未读信息用户的UI方面的更新
+                rankOnlineUsers();
+            }
+        })
     }
 
 
-    // New - update lats chat function
-    const updateLastChatFriend = async () =>{
+    // New - update last chat friend for this user function
+    const updateLastChatFriend = async (lastChatFriendEmail) =>{
         const message_body = JSON.stringify({
             userEmail,  
-            receiverEmail, // new receiver email
+            receiverEmail:lastChatFriendEmail, // new receiver email
         });
 
         await fetch(base_url+'/api/chat/lastchat/', {
