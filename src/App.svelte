@@ -113,6 +113,8 @@
         });
     }
 
+    // NEW - END
+
     // New - 正式版应该用不到
     const unsubscribeOnlineChannel = async() => {
         pusher.unsubscribe('presence-online');
@@ -139,18 +141,24 @@
         })
     }
 
+    // New - Rank the online users to the front of the list
     const rankOnlineUsers = () => {
         // Move the online users to the front of the list
         let onlineFriends = [];
         let offlineFriends = [];
+        let unreadFriends = [];
         friends.forEach(friend => {
-            if (friend.status == "online"){
+            if(friend.unread > 0){
+                unreadFriends = [...unreadFriends, friend];
+            }else{
+                if (friend.status == "online"){
                 onlineFriends = [...onlineFriends, friend];
-            } else {
-                offlineFriends = [...offlineFriends, friend];
+                } else {
+                    offlineFriends = [...offlineFriends, friend];
+                }
             }
         })
-        friends = [...onlineFriends, ...offlineFriends];
+        friends = [...unreadFriends,...onlineFriends, ...offlineFriends];
     }
 
 
@@ -278,6 +286,20 @@
     // Chat implementation - UI messages update helper
     const receiveNewMessage = (data) =>{
         messages = [...messages, data];
+
+        console.log("卢浮宫")
+        console.log(data.unread);
+        // New - update the unread count
+        if(data.unread == "True"){
+            friends.forEach(friend => {
+                if (friend.email == data.userEmail){
+                    console.log(friend, unread);
+                    friend.unread += 1;
+                    rankOnlineUsers();
+                }
+            })
+        }
+        // New - END
     }
 
     // Chat implementation - Swicth the chatting user

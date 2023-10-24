@@ -185,8 +185,56 @@ class FriendRepo:
             return current_friends["currentChatFriend"]
         else:
             return None
+        
+    def update_friend_data_for_others(self, updateUserEmail, updateUserData):
+        """
+        Update the user data in the friend lists of all friends.
+        This method updates the user's data in the friend list of each friend
+        when the user updates their information.
 
-# Example usage:
-# repo = FriendRepo()
-# repo.add_friend('useEmail1', {...})  # Add a friend to 'useEmail1'
-# repo.update_last_read('useEmail1', '1@gmail.com', 200, 0)  # Update lastReadTime and unread count for '1@gmail.com'
+        Args:
+            updateUserEmail (str): The email of the user whose data is being updated.
+            updateUserData (dict): The new data for the user.
+
+        Returns:
+            None
+        """
+        # First, retrieve all friends of the user.
+        user_data = self.get_all_friends(updateUserEmail)
+        if not user_data or 'friends' not in user_data:
+            # If the user has no friends or data is incomplete, do nothing.
+            return
+        
+        friends_list = user_data['friends']
+
+        # Now, we need to iterate through each friend.
+        for friend in friends_list:
+            print(friend)
+            friend_email = friend.get('email')
+            if not friend_email:
+                continue  # If the friend's email is missing, skip.
+
+            # Retrieve the friend list of the friend.
+            friend_data = self.get_all_friends(friend_email)
+            if not friend_data or 'friends' not in friend_data:
+                continue  # If data is incomplete, skip.
+
+            friend_friends_list = friend_data['friends']
+
+            # Now, we look for the user in the friend's friend list and update their data.
+            for ff in friend_friends_list:
+                if ff.get('email') == updateUserEmail:
+                    # We found the user, update their data.
+                    ff.update(updateUserData)  # This assumes the fields are flat and directly updateable.
+
+            # Finally, update the friend entry in the database.
+            self.table.update_item(
+                Key={
+                    'userEmail': friend_email  # Partition key
+                },
+                UpdateExpression="SET friends = :f",
+                ExpressionAttributeValues={
+                    ':f': friend_friends_list
+                },
+                ReturnValues="UPDATED_NEW"
+            )

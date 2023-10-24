@@ -151,9 +151,10 @@ def send_messages():
     if receiver_info["status"] == "offline" or current_chat_friend != user_email:
         # Add unread message to the receiver's unread message list
         # If the receiver is offline or the receiver does not open chat window with sender
-        print("unread triggered")
         friend_repo.add_unread(userEmail=receiver_email, friendEmail=user_email)
-
+        unread = "True"
+    else:
+        unread = "False"
     channel_name = get_channel_name(user_email, receiver_email)
     
     if use_dynamodb: 
@@ -177,6 +178,7 @@ def send_messages():
             'message': message,
             'userEmail': user_email,
             'receiverEmail': receiver_email,
+            'unread': unread
         })
 
     return allow_cors_policy(jsonify({'status': 'success', 'message': 'Operation was successful'})), 200
@@ -305,6 +307,38 @@ def update_last_chet():
     friend_repo.update_current_chat(userEmail=user_email,currentChatFriend=last_chat_friend)
 
     return allow_cors_policy(jsonify([]))
+
+
+@app.route('/api/chat/updateuser/', methods=['POST'])
+def update_user_info():
+    """
+    Update the user's information and reflect the changes across all friend lists.
+    This endpoint receives JSON data containing the user's email and the new data.
+
+    Returns:
+        Response: A JSON response indicating the success or failure of the operation.
+    """
+    # Extract data from the request
+
+    x_user = request.headers.get('X-USER')
+    if x_user is None: user_email = request.json['userEmail']
+    else: user_email = x_user
+    new_user_data = request.json['newData']
+
+    # Validate the received data (you should have more validations according to the data's nature)
+    if not user_email or not new_user_data:
+        return allow_cors_policy(jsonify({'error': 'Invalid data received'}))
+
+    # try:
+    # Use the FriendRepo to update the user data across all friends' lists
+    friend_repo.update_friend_data_for_others(updateUserEmail=user_email, updateUserData=new_user_data)
+
+    # Return a success response
+    return allow_cors_policy(jsonify({'status': 'success', 'message': 'User data updated successfully'}))
+    # except Exception as e:
+    #     # Handle any exceptions that occur during the update process
+    #     return allow_cors_policy(jsonify({'error': 'An error occurred while updating data', 'details': str(e)}))
+
 
 
 if __name__ == '__main__':
