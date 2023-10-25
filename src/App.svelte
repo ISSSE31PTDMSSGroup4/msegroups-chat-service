@@ -396,6 +396,9 @@
         fetchFriendList();
         prevFriendChannelName = mainUserInfo["email"];
 
+        friendChannel.bind('unread', data => receiveUnread(data));    
+
+
     }
 
     // Chat implementation - Format (Unix Time * 1000) to readable format 
