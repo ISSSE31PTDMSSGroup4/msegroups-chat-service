@@ -254,6 +254,12 @@
         console.log("receiveNewFriend triggered");
         console.log(data);
         friends = [...friends, data];
+
+
+        // New - Online: 为新好友更新在线状态
+        updateOnlineStatus();
+        rankOnlineUsers();
+        // NEW - END
     }
 
 
@@ -290,6 +296,8 @@
         });
 
         message = '';  // clear the message input after successful sending
+
+
     }
 
 
