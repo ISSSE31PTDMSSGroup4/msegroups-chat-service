@@ -235,10 +235,12 @@ def get_friend_list():
     if use_dynamodb: 
         results = friend_repo.get_all_friends(userEmail=user_email)
     
-    if results != []:
+    # print("test",results)
+    if results != [] and "friends" in results:
         return allow_cors_policy(jsonify(results["friends"]))
     else:
         return allow_cors_policy(jsonify([]))
+    
 
 @app.route('/api/chat/addfriend/', methods=['POST'])
 def add_friend():

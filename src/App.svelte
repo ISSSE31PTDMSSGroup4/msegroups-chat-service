@@ -383,6 +383,7 @@
             },
         });
         friendChannel = pusher.subscribe(mainUserInfo["email"]);
+        friendChannel.bind('newfriend', data => receiveNewFriend(data));
 
         fetchFriendList();
         prevFriendChannelName = mainUserInfo["email"];
