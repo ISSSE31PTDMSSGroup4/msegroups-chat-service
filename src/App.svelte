@@ -50,15 +50,17 @@
     onMount(async () => {
         Pusher.logToConsole = true;
 
-        // New - 刚登录进主界面需要把last chat user清空
-        updateLastChatFriend("");
+
 
         // Fetch Pusher configuration from the backend
         const response = await fetch(base_url+'/api/chat/config/');
         config = await response.json();
 
+        // New - Unread: 刚登录进主界面需要把last chat user清空
+        updateLastChatFriend("");
+        // NEW - END
 
-        // New - need to update the pusher setup method
+        // New - Online: need to update the pusher setup method
         pusher = new Pusher(config.key, {
             cluster: config.cluster,
             authEndpoint: base_url + "/api/chat/auth/",
@@ -66,6 +68,8 @@
                 params: { email: userEmail },  // 无需 JSON.stringify，直接发送对象即可
             },
         });
+        // NEW - END
+
 
         // Assume the chat page has already get the main user email from somewhere else
         // Friend Implementation - Fetch friend list for the main user when the page is loaded
@@ -76,12 +80,14 @@
         prevFriendChannelName = mainUserInfo["email"];
         friendChannel.bind('newfriend', data => receiveNewFriend(data));
 
-        // New - unread notification channel
+        // New - Unread: unread notification channel
         friendChannel.bind('unread', data => receiveUnread(data));    
+        // NEW - END
+
     })
 
 
-    // New - Subscribe to the presence channnel to check the login status
+    // New - Unread: Subscribe to the presence channnel to check the login status
     const subscribeOnlineChannel = async() => {
         
         // 订阅 presence 频道
@@ -115,10 +121,9 @@
             console.log("onlineUsers: " + onlineUsers);
         });
     }
-
     // NEW - END
 
-    // New - 正式版应该用不到,用于模拟重新登陆的过程测试的
+    // New - Unread: 正式版应该用不到,用于模拟重新登陆的过程测试的
     const unsubscribeOnlineChannel = async() => {
         pusher.unsubscribe('presence-online');
     }
@@ -141,8 +146,9 @@
             }
         })
     }
+    // NEW - END
 
-    // New - Rank the online users to the front of the list
+    // New - Unread+Online: 基于unread和online状态对好友列表进行UI重新排序
     const rankOnlineUsers = () => {
         // Move the online users to the front of the list
         let onlineFriends = [];
@@ -161,6 +167,8 @@
         })
         friends = [...unreadFriends,...onlineFriends, ...offlineFriends];
     }
+    // New - END
+
 
 
     // Chat implementation - Send Message
@@ -233,7 +241,9 @@
         const data = await response.json();
         if (data && data.length > 0) {
                 friends = data;
+                // New - Online: 获取好友列表后订阅presence channel，进而获取在线用户列表
                 subscribeOnlineChannel();
+                // New - END
                 
             }
         console.log(friends)
@@ -259,7 +269,7 @@
                 avatar: mainUserInfo["avatar"],  // the user's avatar URL
                 unread: 0, //这两个在实际implementation里也默认都填0即可，因为是新好友
                 lastReadTime: 0,
-                status: "online" //不会被实际用到，去掉也可以
+                status: "online" //不会被实际用到，去掉也可以 (还是不会被用到,online纯粹由precence channel实现和这个没关系)
 
             },
             friendData:{ // 在dummy app中只有friendEmail会被backend用到，其他信息都是hardcode的，假设其他信息之后都能从Profile拿到在这里填入
@@ -308,7 +318,7 @@
         fetchHistory();
         channel.bind('message', data => receiveNewMessage(data));
 
-        // New - when switch receiver, update the last chat friend to db for main user
+        // New - Unread: when switch receiver, update the last chat friend to db for main user
         updateLastChatFriend(receiverEmail);
         friends.forEach(friend => {
             if (friend.email == receiverEmail){
@@ -316,22 +326,23 @@
                 rankOnlineUsers();
             }
         })
+        // New - END
     }
 
-    // New - unread notification
-    const receiveUnread = (data) =>{
-        friends.forEach(friend => {
+    // New - Unread: unread notification
+    const receiveUnread = (data) =>{ 
+        friends.forEach(friend => { //每次收到一条未读信息就会被trigger，因此data里只有一个senderEmail
             if (friend.email == data.senderEmail){
                 friend.unread += 1;
-
-                // 其他对含有未读信息用户的UI方面的更新
+                // 如果有其他收到未读信息用户的UI方面的更新，加在这里
                 rankOnlineUsers();
             }
         })
     }
+    // New - END
 
 
-    // New - update last chat friend for this user function
+    // New - Unread: update last chat friend for this user function
     const updateLastChatFriend = async (lastChatFriendEmail) =>{
         const message_body = JSON.stringify({
             userEmail,  
@@ -344,6 +355,7 @@
             body: message_body
         });
     }
+    // New - END
 
     // Chat implementation - switch the chatting user by click friend avatar
     const switchToChat = async (friend) => {
@@ -352,7 +364,7 @@
         switchReceiver();  // Switch to the new receiverEmail
     }
 
-    // Chat implementation - 模拟用户重新登陆的过程测试好友列表用，implementation时用不到
+    // Chat implementation - 整个函数模拟用户重新登陆的过程测试好友列表用，implementation时用不到
     const switchMainUser = async () => {
         mainUserInfo = {email: userEmail, avatar: 'https://mdbcdn.b-cdn.net/img/new/avatars/1.webp', name: 'Main User'}
         
@@ -361,6 +373,7 @@
 
         unsubscribeOnlineChannel();
 
+        // New - 这个整个大函数模拟用户重新登陆的过程测试好友列表用，implementation时用不到
         // New - need to update the pusher setup method
          pusher = new Pusher(config.key, {
             cluster: config.cluster,
