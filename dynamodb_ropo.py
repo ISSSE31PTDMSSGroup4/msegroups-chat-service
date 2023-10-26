@@ -102,7 +102,10 @@ class FriendRepo:
 
     def add_friend(self, userEmail, friend_data):
         """Add a new friend to the user's friend list."""
-        current_friends = self.get_all_friends(userEmail)["friends"]
+        if "friends" not in self.get_all_friends(userEmail):
+            current_friends = []
+        else:
+            current_friends = self.get_all_friends(userEmail)["friends"]
 
         if current_friends == []:
             current_friends.append(friend_data)
