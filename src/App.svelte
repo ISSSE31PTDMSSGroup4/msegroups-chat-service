@@ -341,7 +341,7 @@
     const receiveUnread = (data) =>{ 
         friends.forEach(friend => { //每次收到一条未读信息就会被trigger，因此data里只有一个senderEmail
             if (friend.email == data.senderEmail){
-                friend.unread += 1;
+                friend.unread = parseInt(friend.unread, 10) + 1;
                 // 如果有其他收到未读信息用户的UI方面的更新，加在这里
                 rankOnlineUsers();
             }
