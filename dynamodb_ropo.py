@@ -58,7 +58,6 @@ class DynamoMessageRepo:
         self.table.put_item(Item=item)
         return item
 
-
 class FriendRepo:
     """Persistence layer abstraction for friend list and unread messages."""
     
@@ -103,7 +102,10 @@ class FriendRepo:
 
     def add_friend(self, userEmail, friend_data):
         """Add a new friend to the user's friend list."""
-        current_friends = self.get_all_friends(userEmail)["friends"]
+        if "friends" not in self.get_all_friends(userEmail):
+            current_friends = []
+        else:
+            current_friends = self.get_all_friends(userEmail)["friends"]
 
         if current_friends == []:
             current_friends.append(friend_data)
@@ -127,17 +129,115 @@ class FriendRepo:
                 ReturnValues="UPDATED_NEW"
             )
 
-    def update_last_read(self, userEmail, friend_email, lastReadTime, unread):
+    def add_unread(self, userEmail, friendEmail):
         """Update the lastReadTime and unread count for a given friend."""
-        current_friends = self.get_all_friends(userEmail)
+        current_friends = self.get_all_friends(userEmail)["friends"]
+        for friend in current_friends:
+            if friend['email'] == friendEmail:
+                if "unread" not in friend:
+                    friend['unread'] = 1
+                else:
+                    friend['unread'] += 1
+                break
+        self.table.update_item(
+                Key={
+                    'userEmail': userEmail  # Partition key
+                },
+                UpdateExpression="SET friends = :f",
+                ExpressionAttributeValues={
+                    ':f': current_friends
+                },
+                ReturnValues="UPDATED_NEW"
+            )
+    
+    def clear_unread(self, userEmail, friend_email):
+        """Update the lastReadTime and unread count for a given friend."""
+        current_friends = self.get_all_friends(userEmail)["friends"]
         for friend in current_friends:
             if friend['email'] == friend_email:
-                friend['lastReadTime'] = lastReadTime
-                friend['unread'] = unread
+                friend['unread'] = 0
                 break
-        self.table.put_item(Item={'userEmail': userEmail, 'friends': current_friends})
+        self.table.update_item(
+                Key={
+                    'userEmail': userEmail  # Partition key
+                },
+                UpdateExpression="SET friends = :f",
+                ExpressionAttributeValues={
+                    ':f': current_friends
+                },
+                ReturnValues="UPDATED_NEW"
+            )
 
-# Example usage:
-# repo = FriendRepo()
-# repo.add_friend('useEmail1', {...})  # Add a friend to 'useEmail1'
-# repo.update_last_read('useEmail1', '1@gmail.com', 200, 0)  # Update lastReadTime and unread count for '1@gmail.com'
+    def update_current_chat(self, userEmail, currentChatFriend):
+        """Update the last chat frind for a given user ."""
+        self.table.update_item(
+                Key={
+                    'userEmail': userEmail  # Partition key
+                },
+                UpdateExpression="SET currentChatFriend = :f",
+                ExpressionAttributeValues={
+                    ':f': currentChatFriend
+                },
+                ReturnValues="UPDATED_NEW"
+            )
+
+    def get_current_chat(self,userEmail):
+        """Get the last chat friend for a given user ."""
+        current_friends = self.get_all_friends(userEmail)
+        if current_friends and "currentChatFriend" in current_friends:
+            return current_friends["currentChatFriend"]
+        else:
+            return None
+        
+    def update_friend_data_for_others(self, updateUserEmail, updateUserData):
+        """
+        Update the user data in the friend lists of all friends.
+        This method updates the user's data in the friend list of each friend
+        when the user updates their information.
+
+        Args:
+            updateUserEmail (str): The email of the user whose data is being updated.
+            updateUserData (dict): The new data for the user.
+
+        Returns:
+            None
+        """
+        # First, retrieve all friends of the user.
+        user_data = self.get_all_friends(updateUserEmail)
+        if not user_data or 'friends' not in user_data:
+            # If the user has no friends or data is incomplete, do nothing.
+            return
+        
+        friends_list = user_data['friends']
+
+        # Now, we need to iterate through each friend.
+        for friend in friends_list:
+            print(friend)
+            friend_email = friend.get('email')
+            if not friend_email:
+                continue  # If the friend's email is missing, skip.
+
+            # Retrieve the friend list of the friend.
+            friend_data = self.get_all_friends(friend_email)
+            if not friend_data or 'friends' not in friend_data:
+                continue  # If data is incomplete, skip.
+
+            friend_friends_list = friend_data['friends']
+
+            # Now, we look for the user in the friend's friend list and update their data.
+            for ff in friend_friends_list:
+                if ff.get('email') == updateUserEmail:
+                    # We found the user, update their data.
+                    ff.update(updateUserData)  # This assumes the fields are flat and directly updateable.
+
+            # Finally, update the friend entry in the database.
+            self.table.update_item(
+                Key={
+                    'userEmail': friend_email  # Partition key
+                },
+                UpdateExpression="SET friends = :f",
+                ExpressionAttributeValues={
+                    ':f': friend_friends_list
+                },
+                ReturnValues="UPDATED_NEW"
+            )
