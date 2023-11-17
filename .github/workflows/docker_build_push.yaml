@@ -1,0 +1,38 @@
+name: Push chat service to dockerhub
+
+on:
+  push:
+    branches:
+      - 'develop'
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Run Build
+        run: cargo build --verbose
+        working-directory: ./
+      - name: Run Test
+        run: cargo test
+        working-directory: ./
+        env:
+          MONGOURI: ${{ secrets.MONGOURI }}
+  docker:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3 
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_PASSWORD }}
+          
+      - name: Build Docker image
+        run: docker build . --file Dockerfile --tag kedy1ykh/mse-chat-service:$(date +%s) --tag kedy1ykh/mse-chat-service:latest
+      
+      - name: Push Docker image
+        run: docker push kedy1ykh/mse-chat-service
