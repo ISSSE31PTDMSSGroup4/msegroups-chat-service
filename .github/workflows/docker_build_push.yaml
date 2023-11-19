@@ -10,14 +10,21 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-      - name: Run Build
-        run: cargo build --verbose
-        working-directory: ./
-      - name: Run Test
-        run: cargo test
-        working-directory: ./
-        env:
-          MONGOURI: ${{ secrets.MONGOURI }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+      - name: Run Python unit tests
+        run: |
+          python unit_tests.py  
+
   docker:
     needs: test
     runs-on: ubuntu-latest

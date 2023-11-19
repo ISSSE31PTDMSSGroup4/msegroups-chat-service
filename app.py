@@ -149,7 +149,7 @@ def send_messages():
 
     current_chat_friend = friend_repo.get_current_chat(userEmail=receiver_email)
 
-    if receiver_info["status"] == "offline" or current_chat_friend != user_email:
+    if 'status' in receiver_info and receiver_info["status"] == "offline" or current_chat_friend != user_email:
         # Add unread message to the receiver's unread message list
         # If the receiver is offline or the receiver does not open chat window with sender
         friend_repo.add_unread(userEmail=receiver_email, friendEmail=user_email)
