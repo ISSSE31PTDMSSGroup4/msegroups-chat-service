@@ -22,10 +22,25 @@ host = os.getenv('HOST', '0.0.0.0')
 port = int(os.getenv('PORT', '5005'))
 
 
+config = {
+        "server": {
+            "app_id": "",
+            "key": "",
+            "secret": "",
+            "cluster": ""
+        },
+        "aws": {
+            "aws_access_key_id": "",
+            "aws_secret_access_key": "",
+            "aws_region_name": ""
+        }
+    }
+
 if use_config_file:
     # Load from local json file
-    with open('config.json', 'r') as config_file:
-        config = json.load(config_file)
+    if(os.path.exists('config.json') == True):
+        with open('config.json', 'r') as config_file:
+            config = json.load(config_file)
     host = 'localhost'
 else:
     # Load from environment variables
