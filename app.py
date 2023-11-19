@@ -38,9 +38,11 @@ config = {
 
 if use_config_file:
     # Load from local json file
-    if(os.path.exists('config.json') == True):
+    try:
         with open('config.json', 'r') as config_file:
             config = json.load(config_file)
+    except FileNotFoundError:
+        print("Config file not found. Using environment variables instead.")
     host = 'localhost'
 else:
     # Load from environment variables
