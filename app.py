@@ -78,8 +78,11 @@ CORS(app)
 use_dynamodb = True
 
 # Load the config
-with open('config.json', 'r') as config_file:
-    config = json.load(config_file)
+try:
+    with open('config.json', 'r') as config_file:
+        config = json.load(config_file)
+except FileNotFoundError:
+    print("Config file not found. Using environment variables instead.")
 
 aws_access_key_id = config["aws"]["aws_access_key_id"]
 aws_secret_access_key = config["aws"]["aws_secret_access_key"]
