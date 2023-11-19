@@ -7,6 +7,16 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      USE_CONFIG_FILE: 'false'
+      SERVER_APP_ID: ${{ secrets.SERVER_APP_ID }}
+      SERVER_KEY: ${{ secrets.SERVER_KEY }}
+      SERVER_SECRET: ${{ secrets.SERVER_SECRET }}
+      SERVER_CLUSTER: ${{ secrets.SERVER_CLUSTER }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_REGION_NAME: ${{ secrets.AWS_REGION_NAME }}
+      
     steps:
       - name: Checkout
         uses: actions/checkout@v3
