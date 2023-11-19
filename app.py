@@ -22,10 +22,27 @@ host = os.getenv('HOST', '0.0.0.0')
 port = int(os.getenv('PORT', '5005'))
 
 
+config = {
+        "server": {
+            "app_id": "",
+            "key": "",
+            "secret": "",
+            "cluster": ""
+        },
+        "aws": {
+            "aws_access_key_id": "",
+            "aws_secret_access_key": "",
+            "aws_region_name": ""
+        }
+    }
+
 if use_config_file:
     # Load from local json file
-    with open('config.json', 'r') as config_file:
-        config = json.load(config_file)
+    try:
+        with open('config.json', 'r') as config_file:
+            config = json.load(config_file)
+    except FileNotFoundError:
+        print("Config file not found. Using environment variables instead.")
     host = 'localhost'
 else:
     # Load from environment variables
@@ -61,8 +78,11 @@ CORS(app)
 use_dynamodb = True
 
 # Load the config
-with open('config.json', 'r') as config_file:
-    config = json.load(config_file)
+try:
+    with open('config.json', 'r') as config_file:
+        config = json.load(config_file)
+except FileNotFoundError:
+    print("Config file not found. Using environment variables instead.")
 
 aws_access_key_id = config["aws"]["aws_access_key_id"]
 aws_secret_access_key = config["aws"]["aws_secret_access_key"]
@@ -149,7 +169,7 @@ def send_messages():
 
     current_chat_friend = friend_repo.get_current_chat(userEmail=receiver_email)
 
-    if receiver_info["status"] == "offline" or current_chat_friend != user_email:
+    if 'status' in receiver_info and receiver_info["status"] == "offline" or current_chat_friend != user_email:
         # Add unread message to the receiver's unread message list
         # If the receiver is offline or the receiver does not open chat window with sender
         friend_repo.add_unread(userEmail=receiver_email, friendEmail=user_email)

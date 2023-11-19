@@ -1,0 +1,33 @@
+name: Update AWS service
+ 
+on:
+  workflow_run:
+    workflows: ["Push chat service to dockerhub"]    # change this to build and push workflow name
+    branches: 
+      - 'main'
+    types: 
+      - completed
+      
+permissions:
+      id-token: write   # This is required for requesting the JWT
+      contents: read    # This is required for actions/checkout
+
+jobs:
+  update_aws_service:
+    runs-on: ubuntu-latest 
+    env:
+      AWS_REGION: ap-southeast-1
+      CLUSTER_NAME: msegroupscluster
+      SERVICE_NAME: chat-service    # change this to service name
+    
+    steps:
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: arn:aws:iam::${{secrets.AWS_ACCOUNT}}:role/${{secrets.AWS_ROLE}}
+        aws-region: ${{env.AWS_REGION}}
+    
+    - name: Update ECS Service
+      run: |
+        aws ecs update-service --cluster ${{env.CLUSTER_NAME}} --service ${{env.SERVICE_NAME}} --force-new-deployment
+        
